@@ -1,0 +1,16 @@
+**/bin/
+**/obj/
+**/node_modules/
+web/dist/
+web/test-results/
+web/playwright-report/
+web/e2e/
+src/Loca.Api/wwwroot/
+.git/
+.local/
+artifacts/
+docs/
+design/
+tests/
+scripts/
+*.md

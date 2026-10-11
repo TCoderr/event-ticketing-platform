@@ -1,0 +1,12 @@
+Running tests from D:\Etkinlik ve Bilet Satış Platformu\event-ticketing-platform\tests\Loca.IntegrationTests\bin\Release\net10.0\Loca.IntegrationTests.dll (net10.0|x64)
+D:\Etkinlik ve Bilet Satış Platformu\event-ticketing-platform\tests\Loca.IntegrationTests\bin\Release\net10.0\Loca.IntegrationTests.dll (net10.0|x64) passed (48s 906ms)
+
+  In process file artifacts produced:
+    - D:\Etkinlik ve Bilet Satış Platformu\event-ticketing-platform\artifacts\verification\logs\integration\sinan_SINAN_2026-10-10_16_26_21.116270.junit.xml
+
+Test run summary: Passed!
+  total: 213
+  failed: 0
+  succeeded: 213
+  skipped: 0
+  duration: 49s 292ms

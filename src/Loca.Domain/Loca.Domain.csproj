@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Saf iş kuralları: EF, ASP.NET veya sağlayıcı paketine referans verilmez. -->
+  <ItemGroup>
+    <InternalsVisibleTo Include="Loca.UnitTests" />
+  </ItemGroup>
+</Project>

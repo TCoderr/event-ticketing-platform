@@ -1,0 +1,29 @@
+# Build
+bin/
+obj/
+*.user
+.vs/
+.idea/
+TestResults/
+
+# Node
+node_modules/
+web/dist/
+web/coverage/
+web/playwright-report/
+web/test-results/
+
+# Yerel stack durumu ve secret'lar (asla commit edilmez)
+.local/
+.env
+*.password.txt
+*.secret.txt
+*.pfx
+*.key
+
+# Doğrulama çıktıları: ham loglar ve build klasörleri dışarıda, maskelenmiş raporlar içeride
+artifacts/tmp/
+artifacts/**/raw/
+
+# Uygulamaya gömülen SPA çıktısı
+src/Loca.Api/wwwroot/

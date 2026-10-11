@@ -1,0 +1,10 @@
+  Loca.Domain -> D:\Etkinlik ve Bilet Satış Platformu\event-ticketing-platform\src\Loca.Domain\bin\Release\net10.0\Loca.Domain.dll
+  Loca.Api -> D:\Etkinlik ve Bilet Satış Platformu\event-ticketing-platform\src\Loca.Api\bin\Release\net10.0\Loca.Api.dll
+  Loca.UnitTests -> D:\Etkinlik ve Bilet Satış Platformu\event-ticketing-platform\tests\Loca.UnitTests\bin\Release\net10.0\Loca.UnitTests.dll
+  Loca.IntegrationTests -> D:\Etkinlik ve Bilet Satış Platformu\event-ticketing-platform\tests\Loca.IntegrationTests\bin\Release\net10.0\Loca.IntegrationTests.dll
+
+Build succeeded.
+    0 Warning(s)
+    0 Error(s)
+
+Time Elapsed 00:00:04.24

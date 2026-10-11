@@ -1,0 +1,13 @@
+/* Organizatör ve yönetim ekranlarına özgü küçük ekler. Ortak dil app.css'tedir. */
+.org-sessions{margin-top:8px}
+.org-sessions li{display:flex;flex-wrap:wrap;gap:0 14px;align-items:center;min-height:44px;border-top:1px dashed var(--ink-2);font-size:14px}
+.org-sessions a{display:inline-flex;align-items:center;min-height:44px}
+.org-switch{display:inline-flex;align-items:center;min-height:44px;font-size:14px}
+.table-wrap{overflow-x:auto}
+.break{overflow-wrap:anywhere}
+.box{border:1px dashed var(--ink-2);padding:12px;margin-top:10px}
+.box > .form{max-width:none}
+.span-all{grid-column:1 / -1}
+.inline-form{display:grid;gap:12px;align-items:end}
+@media (min-width:768px){.inline-form{grid-template-columns:2fr 1fr 1fr auto}}
+.facts .break{min-width:0}

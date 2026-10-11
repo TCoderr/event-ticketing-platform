@@ -1,0 +1,122 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Hiçbir iş secret kullanmaz; test veritabanları iş içinde üretilen tek kullanımlık konteynerlerdir.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_CLI_UI_LANGUAGE: en
+
+jobs:
+  backend:
+    name: Backend (build, unit, PostgreSQL integration, migrations)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-dotnet@a98b56852c35b8e3190ac28c8c2271da59106c68 # v6.0.0
+        with:
+          global-json-file: global.json
+      - name: Locked restore
+        run: dotnet restore --locked-mode
+      - name: Release build
+        run: dotnet build -c Release --no-restore
+      - name: Unit tests
+        run: dotnet test --project tests/Loca.UnitTests -c Release --no-build --report-xunit-junit --results-directory artifacts/test-results/unit
+      - name: Integration tests (Testcontainers PostgreSQL)
+        run: dotnet test --project tests/Loca.IntegrationTests -c Release --no-build --report-xunit-junit --results-directory artifacts/test-results/integration
+      - name: Model has no pending changes
+        run: |
+          dotnet tool restore
+          dotnet ef migrations has-pending-model-changes --context AppDbContext --project src/Loca.Api --no-build --configuration Release
+          dotnet ef migrations has-pending-model-changes --context PspSimDbContext --project src/Loca.Api --no-build --configuration Release
+      - name: Idempotent migration script
+        run: |
+          dotnet ef migrations script --idempotent --context AppDbContext --project src/Loca.Api --no-build --configuration Release --output artifacts/migrations/app.sql
+          dotnet ef migrations script --idempotent --context PspSimDbContext --project src/Loca.Api --no-build --configuration Release --output artifacts/migrations/pspsim.sql
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: backend-results
+          path: |
+            artifacts/test-results/
+            artifacts/migrations/
+          if-no-files-found: warn
+
+  web:
+    name: Web (typecheck, lint, component tests, build)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+
+  e2e:
+    name: E2E (izole Compose stack + Playwright)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    needs: [backend, web]
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - name: Playwright tarayıcısı
+        run: npx playwright install --with-deps chromium
+      - name: E2E (stack açılır, testler koşar, stack silinir)
+        run: npm run e2e -- --build
+      - name: Compose smoke (ayrı stack)
+        working-directory: .
+        run: |
+          scripts/local-stack.sh init --project loca-ci --https-port 8643 --no-build
+          node scripts/smoke.mjs --project loca-ci
+          scripts/local-stack.sh reset --project loca-ci --confirm-project loca-ci
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: e2e-results
+          path: |
+            web/playwright-report/
+            web/test-results/
+            artifacts/verification/
+          if-no-files-found: warn
+
+  repo-scan:
+    name: Depo taraması (secret / sahiplik)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: "24"
+      - run: node scripts/scan-repo.mjs

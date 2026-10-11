@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Loca.Api/Loca.Api.csproj" />
+    <Project Path="src/Loca.Domain/Loca.Domain.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Loca.IntegrationTests/Loca.IntegrationTests.csproj" />
+    <Project Path="tests/Loca.UnitTests/Loca.UnitTests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,119 @@
+# Loca yerel stack'i. Doğrudan değil, scripts/local-stack.ps1 (veya .sh) ile kullanın:
+# betik secret dosyalarını üretir ve aşağıdaki LOCA_* değişkenlerini verir.
+name: loca
+
+services:
+  postgres:
+    image: postgres:18.6
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: loca
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_superuser_password
+      LOCA_OWNER_PASSWORD_FILE: /run/secrets/db_owner_password
+      LOCA_APP_PASSWORD_FILE: /run/secrets/db_app_password
+    secrets:
+      - db_superuser_password
+      - db_owner_password
+      - db_app_password
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./deploy/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d loca"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    # Port yayınlanmaz: veritabanına yalnız stack ağı içinden erişilir.
+
+  migrate:
+    image: ${LOCA_IMAGE:-loca-api:local}
+    build:
+      context: .
+    command: ["migrate"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      Database__Host: postgres
+      Database__Name: loca
+      Database__OwnerUser: loca_owner
+      Database__OwnerPasswordFile: /run/secrets/db_owner_password
+      Database__AppUser: loca_app
+    secrets:
+      - db_owner_password
+
+  api:
+    image: ${LOCA_IMAGE:-loca-api:local}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    ports:
+      - "127.0.0.1:${LOCA_HTTPS_PORT:-8643}:8443"
+    environment:
+      Database__Host: postgres
+      Database__Name: loca
+      Database__AppUser: loca_app
+      Database__AppPasswordFile: /run/secrets/db_app_password
+      Hosting__HttpsPort: "8443"
+      Hosting__InternalHttpPort: "8080"
+      LocalTls__AutoGenerate: "true"
+      LocalTls__Directory: /var/lib/loca/keys
+      DataProtection__KeysDirectory: /var/lib/loca/keys/data-protection
+      Demo__SeedEnabled: "true"
+      Demo__SimulatorEnabled: "true"
+      Demo__SeedPasswordDirectory: /run/loca/seed-users
+      Logging__Console__FormatterName: json
+      Logging__Console__FormatterOptions__IncludeScopes: "true"
+      # Simüle PSP aynı süreçte barınır; uygulama onu yalnız loopback HTTP + API anahtarı ile çağırır.
+      Psp__BaseUrl: http://127.0.0.1:8080/sim-psp/
+      Psp__ApiKeyFile: /run/secrets/psp_api_key
+      Psp__WebhookSecretFiles__0: /run/secrets/psp_webhook_secret
+      Psp__Simulator__Enabled: "true"
+      Psp__Simulator__WebhookTargetUrl: http://127.0.0.1:8080/api/webhooks/psp
+      Psp__Simulator__LateSuccessDelaySeconds: ${LOCA_PSP_LATE_SUCCESS_DELAY_SECONDS:-900}
+      Demo__Crowd__Enabled: ${LOCA_DEMO_CROWD_ENABLED:-true}
+      # Aşağıdaki değerler yalnız izole E2E stack'i için değiştirilir (kısa hold süresi, gevşek hız sınırı).
+      Holds__MinTtlSeconds: ${LOCA_HOLDS_MIN_TTL_SECONDS:-120}
+      RateLimits__LoginPerMinute: ${LOCA_RATE_LOGIN_PER_MINUTE:-10}
+      RateLimits__RegisterPerMinute: ${LOCA_RATE_REGISTER_PER_MINUTE:-5}
+      RateLimits__CatalogPerMinute: ${LOCA_RATE_CATALOG_PER_MINUTE:-300}
+      RateLimits__HoldPerMinute: ${LOCA_RATE_HOLD_PER_MINUTE:-20}
+      RateLimits__CheckoutPerMinute: ${LOCA_RATE_CHECKOUT_PER_MINUTE:-10}
+    secrets:
+      - db_app_password
+      - psp_api_key
+      - psp_webhook_secret
+    volumes:
+      - keys:/var/lib/loca/keys
+      - ${LOCA_STATE_DIR:?LOCA_STATE_DIR is required - use scripts/local-stack}/users:/run/loca/seed-users:ro
+    healthcheck:
+      test: ["CMD", "dotnet", "Loca.Api.dll", "healthcheck"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 5s
+    stop_grace_period: 20s
+
+secrets:
+  db_superuser_password:
+    file: ${LOCA_STATE_DIR:?LOCA_STATE_DIR is required - use scripts/local-stack}/secrets/db-superuser.password.txt
+  db_owner_password:
+    file: ${LOCA_STATE_DIR}/secrets/db-owner.password.txt
+  db_app_password:
+    file: ${LOCA_STATE_DIR}/secrets/db-app.password.txt
+  psp_api_key:
+    file: ${LOCA_STATE_DIR}/secrets/psp-api-key.secret.txt
+  psp_webhook_secret:
+    file: ${LOCA_STATE_DIR}/secrets/psp-webhook.secret.txt
+
+volumes:
+  pgdata:
+    labels:
+      loca.stack-id: ${LOCA_STACK_ID:-unset}
+  keys:
+    labels:
+      loca.stack-id: ${LOCA_STACK_ID:-unset}

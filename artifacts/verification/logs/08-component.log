@@ -1,0 +1,11 @@
+npm notice run loca-web@0.1.0 test
+npm notice run vitest run
+
+ RUN  v5.0.3 D:/Etkinlik ve Bilet Satış Platformu/event-ticketing-platform/web
+
+
+ Test Files  7 passed (7)
+      Tests  123 passed (123)
+   Start at  19:28:39
+   Duration  46.31s (environment 81%, setup 16%, import 2%, tests 1%)
+

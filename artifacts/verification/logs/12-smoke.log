@@ -1,0 +1,50 @@
+﻿PASS  HTTPS hazır (sabitlenmiş sertifika)
+PASS  Güvenlik başlıkları
+PASS  Server başlığı sızmıyor
+PASS  Kimliksiz istek JSON 401
+PASS  Demo girişi ve rol eşlemesi: platform-admin@loca.demo
+PASS  Demo girişi ve rol eşlemesi: organizer-kumru@loca.demo
+PASS  Demo girişi ve rol eşlemesi: organizer-marti@loca.demo
+PASS  Demo girişi ve rol eşlemesi: gate-kumru@loca.demo
+PASS  Demo girişi ve rol eşlemesi: customer-ayse@loca.demo
+PASS  Demo girişi ve rol eşlemesi: customer-mehmet@loca.demo
+PASS  Logout sonrası eski çerez reddedilir
+PASS  CSRF token olmadan yazma reddedilir
+PASS  Organizatör mekan → plan → etkinlik → seans oluşturup yayınlar
+PASS  Kapı görevlisi seansa atanır
+PASS  Yeni seans public keşifte görünür
+PASS  Hold oluşturulur (201) ve süre/garanti alanlarını taşır
+PASS  Aynı Idempotency-Key: yanıt bayt bayt aynı
+PASS  Başkasının tuttuğu koltuk: 409 ve kısmi hold yok
+PASS  Koltuk planı ipucu güncel (2 dolu, 6 boş)
+PASS  Checkout 202 döner (ödeme henüz alınmadı)
+PASS  Ödeme worker ile tamamlanır: sipariş Paid
+PASS  Ödenmiş sipariş için 2 bilet üretilir; QR token yalnız ayrıntıda ve no-store
+PASS  Başka müşteri bileti göremez (404)
+PASS  Kapı görevlisi atandığı seansı görür ve pencere açık
+PASS  Check-in: ilk tarama Kabul
+PASS  Check-in: aynı anahtar aynı yanıt
+PASS  Check-in: ikinci tarama Zaten Kullanıldı
+PASS  Müşteri kapı ucunu kullanamaz (404)
+PASS  Simüle PSP uçları dış porttan erişilemez (404)
+PASS  Organizatör özeti: 2 satış, 1 giriş, brüt 900,00 TRY
+PASS  Başka organizatör bu seansı göremez ve iptal edemez (404)
+PASS  Kullanılmış biletli / sınırı geçmiş sipariş iptal edilemez (409)
+PASS  Demo ödeme senaryosu opt-in olmayan seansta reddedilir (422)
+PASS  Sağlayıcı yanıtı kaybolur: ödeme Belirsiz, sipariş beklemede (ret değil)
+PASS  Reconciliation worker belirsiz ödemeyi kurtarır: Paid
+PASS  Reddedilen ödeme: sipariş Failed, neden Declined
+PASS  Seed idempotent (ikinci çalıştırma kayıt üretmez)
+PASS  API konteyneri root değil — uid=1654
+PASS  Restart sonrası veri ve oturum korunur (Data Protection anahtarları kalıcı)
+PASS  Restart sonrası demo kullanıcı aynı parolayla girer
+PASS  Restart sonrası sipariş Paid, bilet CheckedIn olarak kalır
+PASS  DB kapalı: /health/ready 503
+PASS  DB kapalı: /health/live 200
+PASS  DB kapalı: istek başarı göstermez (503)
+PASS  DB açıldı: /health/ready 200
+PASS  DB açıldı: giriş yeniden çalışır
+PASS  Konteyner loglarında secret/parola/çerez/token yok — 24 değer tarandı
+PASS  Loglarda e-posta adresi yok
+
+Smoke: 48/48 geçti

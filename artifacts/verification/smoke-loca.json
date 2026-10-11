@@ -1,0 +1,251 @@
+{
+  "project": "loca",
+  "origin": "https://localhost:8643",
+  "at": "2026-10-10T16:34:06.081Z",
+  "skipDisruptive": false,
+  "total": 48,
+  "passed": 48,
+  "failed": 0,
+  "results": [
+    {
+      "name": "HTTPS hazır (sabitlenmiş sertifika)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Güvenlik başlıkları",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Server başlığı sızmıyor",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Kimliksiz istek JSON 401",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Demo girişi ve rol eşlemesi: platform-admin@loca.demo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Demo girişi ve rol eşlemesi: organizer-kumru@loca.demo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Demo girişi ve rol eşlemesi: organizer-marti@loca.demo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Demo girişi ve rol eşlemesi: gate-kumru@loca.demo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Demo girişi ve rol eşlemesi: customer-ayse@loca.demo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Demo girişi ve rol eşlemesi: customer-mehmet@loca.demo",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Logout sonrası eski çerez reddedilir",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "CSRF token olmadan yazma reddedilir",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Organizatör mekan → plan → etkinlik → seans oluşturup yayınlar",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Kapı görevlisi seansa atanır",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Yeni seans public keşifte görünür",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Hold oluşturulur (201) ve süre/garanti alanlarını taşır",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Aynı Idempotency-Key: yanıt bayt bayt aynı",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Başkasının tuttuğu koltuk: 409 ve kısmi hold yok",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Koltuk planı ipucu güncel (2 dolu, 6 boş)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Checkout 202 döner (ödeme henüz alınmadı)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Ödeme worker ile tamamlanır: sipariş Paid",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Ödenmiş sipariş için 2 bilet üretilir; QR token yalnız ayrıntıda ve no-store",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Başka müşteri bileti göremez (404)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Kapı görevlisi atandığı seansı görür ve pencere açık",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Check-in: ilk tarama Kabul",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Check-in: aynı anahtar aynı yanıt",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Check-in: ikinci tarama Zaten Kullanıldı",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Müşteri kapı ucunu kullanamaz (404)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Simüle PSP uçları dış porttan erişilemez (404)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Organizatör özeti: 2 satış, 1 giriş, brüt 900,00 TRY",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Başka organizatör bu seansı göremez ve iptal edemez (404)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Kullanılmış biletli / sınırı geçmiş sipariş iptal edilemez (409)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Demo ödeme senaryosu opt-in olmayan seansta reddedilir (422)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Sağlayıcı yanıtı kaybolur: ödeme Belirsiz, sipariş beklemede (ret değil)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Reconciliation worker belirsiz ödemeyi kurtarır: Paid",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Reddedilen ödeme: sipariş Failed, neden Declined",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Seed idempotent (ikinci çalıştırma kayıt üretmez)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "API konteyneri root değil",
+      "ok": true,
+      "detail": "uid=1654"
+    },
+    {
+      "name": "Restart sonrası veri ve oturum korunur (Data Protection anahtarları kalıcı)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Restart sonrası demo kullanıcı aynı parolayla girer",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Restart sonrası sipariş Paid, bilet CheckedIn olarak kalır",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "DB kapalı: /health/ready 503",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "DB kapalı: /health/live 200",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "DB kapalı: istek başarı göstermez (503)",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "DB açıldı: /health/ready 200",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "DB açıldı: giriş yeniden çalışır",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "name": "Konteyner loglarında secret/parola/çerez/token yok",
+      "ok": true,
+      "detail": "24 değer tarandı"
+    },
+    {
+      "name": "Loglarda e-posta adresi yok",
+      "ok": true,
+      "detail": ""
+    }
+  ]
+}

@@ -1,0 +1,1406 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Loca — statik prototip</title>
+<meta name="author" content="TCoderr">
+<style>
+/* ------------------------------------------------------------------ tokens */
+:root{
+  --paper:#F5F0E6; --paper-2:#ECE5D6; --ink:#1C1A17; --ink-2:#5A544A;
+  --accent:#C8371D; --accent-dk:#A52C16;
+  --ok:#1F6B45; --warn:#8A5A00; --err:#A3231A; --info:#1F4E79;
+  /* kapasite çubuğu — validate_palette.js ile doğrulandı (light, #F5F0E6) */
+  --cap-sold:#2B5F9E; --cap-held:#B8650A; --cap-free:#0F8A78;
+  --f-display:"Fraunces",Georgia,"Times New Roman",serif;
+  --f-ui:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",Consolas,monospace;
+  --g-bg:#0E0D0B; --g-fg:#F5F0E6; --g-dim:#BDB6A7;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-bottom:170px;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 16px/1.5 var(--f-ui);overflow-wrap:break-word}
+body.dark{background:var(--g-bg)}
+[hidden]{display:none !important}
+h1,h2,h3,p,ul,ol,dl,dd,figure,fieldset{margin:0;padding:0}
+fieldset{border:0;min-width:0}
+legend{padding:0}
+ul,ol{list-style:none}
+a{color:inherit}
+button,input,select{font:inherit;color:inherit}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
+.wrap{max-width:1200px;margin:0 auto;padding:0 16px}
+@media (min-width:768px){.wrap{padding:0 24px}}
+
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+h1:focus{outline:none}
+.skip{position:absolute;left:8px;top:-60px;background:var(--paper);color:var(--ink);border:2px solid var(--ink);padding:10px 14px;z-index:20}
+.skip:focus{top:8px}
+
+/* ------------------------------------------------------- prototip gezgini */
+.proto{background:var(--ink);color:var(--paper);font-size:13px}
+.proto :focus-visible{outline-color:var(--paper)}
+.proto-in{display:flex;flex-wrap:wrap;align-items:center;gap:4px 16px;padding-top:6px;padding-bottom:6px}
+.proto-tag{font-family:var(--f-mono);letter-spacing:.06em;border:1px dashed var(--paper);padding:1px 6px;white-space:nowrap}
+.proto-note{flex:1 1 220px;min-width:0}
+.proto-links{display:none;flex-wrap:wrap;gap:0 2px;flex:1 1 100%}
+.proto-links a{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;text-decoration:none;border-bottom:3px solid transparent}
+.proto-links a:hover{border-bottom-color:var(--g-dim)}
+.proto-links a[aria-current="page"]{border-bottom-color:var(--paper);font-weight:600}
+.proto-links .n{font-family:var(--f-mono);margin-right:6px;color:var(--g-dim)}
+.proto-pick{display:flex;align-items:center;gap:8px;flex:1 1 100%;padding-bottom:4px}
+.proto-pick select{flex:1 1 auto;min-width:0;min-height:44px;background:var(--ink);color:var(--paper);border:1px solid var(--paper);border-radius:2px;padding:0 8px}
+@media (min-width:860px){.proto-links{display:flex}.proto-pick{display:none}}
+
+/* ------------------------------------------------------------ ortak parça */
+.demo-tag{display:inline-block;font:500 12px/1.4 var(--f-mono);letter-spacing:.04em;border:1px dashed currentColor;padding:1px 7px;white-space:nowrap;vertical-align:middle}
+.app-head{border-bottom:1px solid var(--ink)}
+.app-head-in{display:flex;flex-wrap:wrap;align-items:center;gap:0 20px;min-height:60px}
+.wordmark{font:600 28px/1 var(--f-display);text-decoration:none;letter-spacing:-.01em;display:inline-flex;align-items:center;min-height:44px}
+.app-nav{display:flex;gap:0 4px;flex:1 1 auto}
+.app-nav a,.app-nav span{display:inline-flex;align-items:center;min-height:44px;padding:0 10px;text-decoration:none;border-bottom:2px solid transparent}
+.app-nav a:hover{border-bottom-color:var(--ink-2)}
+.app-nav a[aria-current="page"]{border-bottom-color:var(--ink);font-weight:600}
+.who{color:var(--ink-2);font-size:14px;padding:6px 0}
+
+.screen{padding:24px 0 0}
+.screen-pad{padding-bottom:56px}
+.eyebrow{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;color:var(--ink-2);font-size:14px;margin-bottom:8px}
+h1{font:600 30px/1.15 var(--f-display);letter-spacing:-.01em}
+h2{font:600 21px/1.25 var(--f-display)}
+h3{font:600 15px/1.3 var(--f-ui)}
+@media (min-width:768px){h1{font-size:38px}h2{font-size:23px}}
+.lede{color:var(--ink-2);margin-top:6px;max-width:68ch}
+.when{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:14px}
+.ctx{display:flex;flex-direction:column;gap:2px;margin-top:10px}
+.ctx .venue{color:var(--ink-2)}
+.cut{border:0;border-top:1px dashed var(--ink);margin:20px 0}
+.note{color:var(--ink-2);font-size:14px}
+.note-box{border:1px solid var(--ink);border-left-width:4px;padding:10px 14px;font-size:14px;margin-top:16px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:44px;padding:0 18px;border:1px solid var(--ink);border-radius:2px;background:transparent;color:var(--ink);font-weight:600;font-size:15px;text-decoration:none;cursor:pointer;text-align:center}
+.btn:hover{background:var(--paper-2)}
+.btn-primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-primary:hover{background:var(--accent-dk);border-color:var(--accent-dk)}
+.btn[aria-disabled="true"]{background:transparent;border:1px dashed var(--ink-2);color:var(--ink-2);cursor:not-allowed}
+.btn-link{border-color:transparent;text-decoration:underline;padding:0 6px;font-weight:500}
+.ico{width:1.25em;height:1.25em;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+.field label,.lbl{font-size:13px;font-weight:600}
+.field select,.field input{min-height:44px;border:1px solid var(--ink);border-radius:2px;background:var(--paper);padding:0 10px;min-width:0;width:100%}
+
+.status{display:inline-flex;align-items:center;gap:6px;font-weight:600;font-size:14px}
+.t-ok{color:var(--ok)}.t-warn{color:var(--warn)}.t-err{color:var(--err)}.t-info{color:var(--info)}.t-mute{color:var(--ink-2)}
+
+/* demo değiştiriciler (radyo karoları) */
+.demo-set{border:1px dashed var(--ink);padding:12px 14px 14px}
+.demo-set legend{padding:0 6px;font-size:13px;font-weight:600}
+.opts{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.opt{position:relative;display:inline-flex}
+.opt input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.opt span{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px solid var(--ink);border-radius:2px;font-size:14px}
+.opt span::before{content:"";width:12px;height:12px;border:1.5px solid currentColor;border-radius:50%;flex:none}
+.opt input:checked + span{background:var(--ink);color:var(--paper);font-weight:600}
+.opt input:checked + span::before{background:currentColor;box-shadow:inset 0 0 0 2.5px var(--ink)}
+.opt input:focus-visible + span{outline:2px solid var(--ink);outline-offset:2px}
+
+/* ------------------------------------------------------------- 1 · keşif */
+.filters{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px;padding:14px 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);align-items:end}
+.filters .btn{grid-column:1 / -1}
+@media (min-width:768px){.filters{grid-template-columns:repeat(4,minmax(0,1fr)) auto}.filters .btn{grid-column:auto}}
+.count{margin:14px 0 2px;color:var(--ink-2);font-size:14px}
+.rows > li{display:grid;grid-template-columns:68px minmax(0,1fr);gap:4px 14px;padding:16px 0;border-bottom:1px dashed var(--ink-2)}
+.r-date{grid-row:1 / span 3;text-align:center;border-right:1px solid var(--ink);padding-right:12px;align-self:start}
+.r-day{display:block;font:600 38px/1 var(--f-display);font-variant-numeric:lining-nums}
+.r-mon{display:block;font:500 12px/1.5 var(--f-mono);letter-spacing:.08em}
+.r-time{display:block;font:500 13px/1.4 var(--f-mono)}
+.r-main,.r-sale,.r-act{grid-column:2;min-width:0}
+.r-title{font:600 21px/1.2 var(--f-display)}
+.r-meta{color:var(--ink-2);font-size:14px;margin-top:2px}
+.r-sale{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 14px}
+.r-price{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500}
+.r-price small{font-family:var(--f-ui);color:var(--ink-2);font-size:13px;font-weight:400}
+.r-act{margin-top:6px}
+@media (min-width:900px){
+  .rows > li{grid-template-columns:92px minmax(0,1fr) 250px 170px;align-items:center;gap:0 22px}
+  .r-date{grid-row:auto;align-self:stretch;display:flex;flex-direction:column;justify-content:center}
+  .r-main,.r-sale,.r-act{grid-column:auto}
+  .r-sale{flex-direction:column;align-items:flex-start}
+  .r-act{margin:0;text-align:right}
+  .r-day{font-size:44px}
+}
+.empty{padding:28px 0;border-bottom:1px dashed var(--ink-2)}
+.empty p{margin-bottom:12px}
+
+/* ------------------------------------------------------ 2 · koltuk seçimi */
+.legend{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:16px;font-size:14px}
+.legend li{display:inline-flex;align-items:center;gap:8px}
+.lg{width:20px;height:20px;border-radius:3px;flex:none;display:inline-grid;place-items:center}
+.lg-free{border:1.5px solid var(--ink)}
+.lg-sel{background:var(--accent);color:#fff}
+.lg-sel .ico{width:14px;height:14px;stroke-width:3}
+.lg-taken{border:1px solid var(--ink-2);background:repeating-linear-gradient(135deg,transparent 0 3px,var(--ink-2) 3px 4.5px)}
+.seat-grid{display:grid;gap:28px;margin-top:20px}
+@media (min-width:1200px){.seat-grid{grid-template-columns:minmax(0,430px) minmax(0,1fr);gap:40px;align-items:start}}
+@media (min-width:1200px) and (min-height:760px){.seat-grid > div:first-child{position:sticky;top:12px}}
+.plan{border:1px solid var(--ink);padding:10px;max-width:560px}
+.plan svg{display:block;width:100%;height:auto}
+.plan text{font-family:var(--f-mono);fill:var(--ink)}
+.seat .box{fill:var(--paper);stroke:var(--ink);stroke-width:1.4}
+.seat .tick{display:none;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.seat .hit{fill:transparent}
+.seat:not(.is-taken){cursor:pointer}
+.seat:not(.is-taken):hover .box{stroke-width:2.6}
+.seat.is-sel .box{fill:var(--accent);stroke:var(--accent)}
+.seat.is-sel .tick{display:block}
+.seat.is-taken .box{fill:url(#hatch);stroke:var(--ink-2);stroke-width:1}
+.plan-cap{font-size:13px;color:var(--ink-2);margin-top:8px}
+.seatlist h3{margin:18px 0 4px;padding-top:12px;border-top:1px solid var(--ink);display:flex;justify-content:space-between;gap:12px;font-size:16px}
+.seatlist h3:first-of-type{margin-top:10px}
+.rowset{margin-top:10px}
+.rowset legend{font-size:13px;font-weight:600;color:var(--ink-2);padding:0;margin-bottom:4px}
+.tiles{display:flex;flex-wrap:wrap;gap:3px 14px}
+.half{display:inline-flex;flex-wrap:wrap;gap:3px}
+.st{position:relative;display:inline-flex}
+.st input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+.st input:disabled{cursor:not-allowed}
+.st-box{width:44px;height:44px;display:inline-flex;align-items:center;justify-content:center;gap:3px;border:1.5px solid var(--ink);border-radius:3px;background:var(--paper);font:500 14px/1 var(--f-mono)}
+.st input:checked + .st-box{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.st input:checked + .st-box::before{content:"";width:9px;height:5px;border-left:2px solid #fff;border-bottom:2px solid #fff;transform:rotate(-45deg) translate(1px,-1px);flex:none}
+.st input:disabled + .st-box{border:1px solid var(--ink-2);background:repeating-linear-gradient(135deg,transparent 0 4px,var(--ink-2) 4px 5.5px)}
+.st input:disabled + .st-box .st-no{background:var(--paper);padding:2px 3px;border-radius:2px}
+.st input:focus-visible + .st-box{outline:2px solid var(--ink);outline-offset:2px}
+.st input:not(:disabled):hover + .st-box{border-width:2.5px}
+
+.sumbar{position:sticky;bottom:0;background:var(--paper);border-top:2px solid var(--ink);margin-top:32px;z-index:5}
+@media (max-height:520px){.sumbar{position:static}}
+.sumbar-in{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 16px;padding-top:10px;padding-bottom:12px;align-items:center}
+.sum-k{display:block;font-size:12px;font-weight:600;color:var(--ink-2);letter-spacing:.02em}
+.sum-sel{grid-column:1 / -1;min-width:0}
+.sum-labels{font:500 14px/1.45 var(--f-mono);display:block}
+.sl{display:inline-block;white-space:nowrap;margin-right:12px}
+.sum-total strong{font:600 22px/1.2 var(--f-mono);font-variant-numeric:tabular-nums}
+.sum-msg{grid-column:1 / -1;font-size:14px;font-weight:600;color:var(--err);display:flex;gap:6px;align-items:center}
+.sum-msg:empty{display:none}
+@media (min-width:768px){.sumbar-in{grid-template-columns:minmax(0,1fr) auto auto;gap:6px 28px}.sum-sel{grid-column:auto}}
+
+/* --------------------------------------------------------- 3 · genel giriş */
+.cats{margin-top:20px;border-top:1px solid var(--ink)}
+.cats > li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;align-items:center;padding:16px 0;border-bottom:1px dashed var(--ink-2)}
+.c-name{font:600 20px/1.2 var(--f-display)}
+.c-desc{color:var(--ink-2);font-size:14px}
+.c-left{font-size:13px;margin-top:2px}
+.c-price{font:500 17px/1.2 var(--f-mono);font-variant-numeric:tabular-nums;text-align:right}
+.c-ctl{grid-column:1 / -1}
+@media (min-width:768px){.cats > li{grid-template-columns:minmax(0,1fr) 140px 170px}.c-ctl{grid-column:auto;justify-self:end}}
+.stepper{display:inline-flex;align-items:stretch;border:1px solid var(--ink);border-radius:2px}
+.stepper button{width:48px;min-height:46px;border:0;background:transparent;cursor:pointer;display:inline-grid;place-items:center}
+.stepper button:hover{background:var(--paper-2)}
+.stepper button[aria-disabled="true"]{color:#8A8375;cursor:not-allowed;background:repeating-linear-gradient(135deg,transparent 0 5px,rgba(90,84,74,.25) 5px 6px)}
+.stepper output{width:52px;display:inline-grid;place-items:center;border-left:1px solid var(--ink);border-right:1px solid var(--ink);font:600 18px/1 var(--f-mono)}
+
+/* --------------------------------------------------------- 4 · hold + ödeme */
+.pay-grid{display:grid;gap:28px;margin-top:20px}
+@media (min-width:960px){.pay-grid{grid-template-columns:minmax(0,1fr) minmax(0,440px);gap:56px;align-items:start}}
+.timer{border:1px solid var(--ink);padding:14px 16px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 18px;align-items:center}
+.timer-val{font:600 44px/1 var(--f-mono);font-variant-numeric:tabular-nums;grid-row:span 2}
+.timer-k{font-size:13px;font-weight:600}
+.timer-sub{font-size:14px;color:var(--ink-2)}
+@media (max-width:479px){.timer{grid-template-columns:minmax(0,1fr)}.timer-val{grid-row:auto}}
+.timer.is-low{border-width:3px;border-style:double}
+.timer.is-out{border-style:dashed}
+.timer-flag{display:none}
+.timer.is-low .timer-flag,.timer.is-out .timer-flag{display:inline-flex}
+.lines{width:100%;border-collapse:collapse;margin-top:20px}
+.lines caption{text-align:left;font:600 21px/1.25 var(--f-display);padding-bottom:8px}
+.lines th,.lines td{padding:10px 0;border-bottom:1px dashed var(--ink-2);text-align:left;vertical-align:baseline}
+.lines thead th{font-size:12px;font-weight:600;color:var(--ink-2);border-bottom:1px solid var(--ink)}
+.lines .num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;padding-left:10px;white-space:nowrap}
+.lines tbody th{font:500 15px/1.4 var(--f-mono)}
+.lines tfoot th,.lines tfoot td{border-bottom:0;border-top:2px solid var(--ink);font-weight:600;font-size:18px;padding-top:12px}
+.pay-form > * + *{margin-top:18px}
+.method{border:1px solid var(--ink);padding:12px 14px;display:flex;gap:10px;align-items:flex-start}
+.scn{display:flex;flex-direction:column;margin-top:6px}
+.scn label{display:grid;grid-template-columns:24px minmax(0,1fr);gap:0 8px;align-items:start;min-height:44px;padding:9px 0;border-top:1px dashed var(--ink-2);cursor:pointer}
+.scn label:first-child{border-top:0}
+.scn input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--ink)}
+.scn small{display:block;color:var(--ink-2);font-size:13px}
+.pay-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.pay-actions .btn-primary{flex:1 1 240px;min-height:52px;font-size:16px}
+
+/* -------------------------------------------------------- 5 · sipariş durumu */
+.order-grid{display:grid;gap:28px;margin-top:22px}
+@media (min-width:960px){.order-grid{grid-template-columns:minmax(0,1fr) minmax(0,400px);gap:56px;align-items:start}}
+.ost{border:1px solid var(--ink);padding:20px}
+.ost-head{display:flex;gap:16px;align-items:center}
+.ost-ico{width:60px;height:60px;border:2px solid currentColor;display:grid;place-items:center;flex:none}
+.ost-ico .ico{width:32px;height:32px;stroke-width:2.4}
+.ost-title{font:600 30px/1.1 var(--f-display);color:var(--ink)}
+.ost-code{font:500 12px/1.5 var(--f-mono);color:var(--ink-2)}
+.ost[data-tone="ok"] .ost-ico{color:var(--ok);background:var(--ok)}
+.ost[data-tone="ok"] .ost-ico .ico{color:#fff}
+.ost[data-tone="err"] .ost-ico{color:var(--err);border-width:4px}
+.ost[data-tone="warn"] .ost-ico{color:var(--warn);border-style:dashed}
+.ost[data-tone="info"] .ost-ico{color:var(--info);border-radius:50%}
+.ost[data-tone="mute"] .ost-ico{color:var(--ink-2);border-style:dotted}
+.ost-body{margin-top:16px}
+.ost-body p + p{margin-top:8px}
+.ost-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.ost-sub{margin-top:18px}
+.facts{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 16px;font-size:15px}
+.facts dt{color:var(--ink-2);font-size:13px;font-weight:600;padding-top:2px}
+.facts dd ul li{font-family:var(--f-mono);font-size:14px}
+.side h2{margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--ink)}
+
+/* ----------------------------------------------------------- 6 · bilet */
+.tk-pick{margin-top:18px}
+.ticket{border:1px solid var(--ink);margin-top:18px;display:grid;max-width:820px}
+.tk-main{padding:20px}
+.tk-kicker{font:500 12px/1.4 var(--f-mono);letter-spacing:.12em;color:var(--ink-2)}
+.tk-title{font:600 28px/1.15 var(--f-display);margin-top:4px}
+.tk-label{font:600 26px/1.2 var(--f-mono);margin-top:14px}
+.tk-facts{margin-top:16px}
+.tk-stub{border-top:2px dashed var(--ink);padding:20px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center}
+@media (min-width:720px){.ticket{grid-template-columns:minmax(0,1fr) 270px}.tk-stub{border-top:0;border-left:2px dashed var(--ink);justify-content:center}.tk-main{padding:26px}}
+.qr-ph{width:200px;height:200px;max-width:100%;border:1px solid var(--ink);display:grid;place-items:center;background:
+  repeating-linear-gradient(45deg,transparent 0 9px,rgba(28,26,23,.5) 9px 10px),
+  repeating-linear-gradient(-45deg,transparent 0 9px,rgba(28,26,23,.5) 9px 10px)}
+.qr-ph span{background:var(--paper);border:1px solid var(--ink);padding:8px 10px;font:600 14px/1.3 var(--f-mono)}
+
+/* --------------------------------------------------------- 7 · organizatör */
+.org{display:grid}
+.org-nav{border-bottom:1px solid var(--ink)}
+.org-nav ul{display:flex;flex-wrap:wrap;gap:0 4px}
+.org-nav a,.org-nav .off{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 10px;text-decoration:none;border-bottom:3px solid transparent}
+.org-nav a[aria-current="page"]{border-bottom-color:var(--ink);font-weight:600}
+.org-nav .off{color:var(--ink-2)}
+.org-nav .off small{font:500 11px/1 var(--f-mono);border:1px dashed var(--ink-2);padding:2px 4px}
+.org-main{min-width:0;padding-top:22px}
+@media (min-width:1024px){
+  .org{grid-template-columns:210px minmax(0,1fr);gap:40px}
+  .org-nav{border-bottom:0;border-right:1px solid var(--ink);padding-top:22px;min-height:70vh}
+  .org-nav ul{flex-direction:column}
+  .org-nav a,.org-nav .off{border-bottom:0;border-left:3px solid transparent;justify-content:space-between}
+  .org-nav a[aria-current="page"]{border-left-color:var(--ink)}
+}
+.chips{display:flex;flex-wrap:wrap;gap:6px 8px;margin-top:10px}
+.chip{border:1px solid var(--ink);padding:2px 8px;font-size:13px}
+.blk{margin-top:30px;padding-top:18px;border-top:1px solid var(--ink)}
+.blk > h2{margin-bottom:4px}
+/* kapasite çubuğu */
+.cap{margin-top:14px;max-width:860px}
+.cap-plot{position:relative;padding:26px 0 34px}
+.cap-bar{display:flex;gap:2px;height:22px;background:var(--paper)}
+.cap-bar .seg{min-width:3px;height:100%}
+.cap-bar .seg:last-child{border-radius:0 4px 4px 0}
+.seg.sold{background:var(--cap-sold)}.seg.held{background:var(--cap-held)}.seg.free{background:var(--cap-free)}
+.cap-dl{position:absolute;font-size:14px;line-height:20px;white-space:nowrap;color:var(--ink)}
+.cap-dl b{font:600 15px/20px var(--f-mono);margin-left:4px}
+.cap-dl.sold{top:0;left:0}
+.cap-dl.free{top:0;right:0}
+.cap-dl.held{bottom:0;transform:translateX(-50%)}
+.cap-dl.held::before{content:"";position:absolute;left:50%;top:-10px;width:1px;height:8px;background:var(--ink)}
+.cap-tbl{border-collapse:collapse;margin-top:6px;font-size:14px;width:100%;max-width:440px}
+.cap-tbl th,.cap-tbl td{text-align:left;padding:6px 0;border-bottom:1px dashed var(--ink-2);font-weight:400}
+.cap-tbl thead th{font-size:12px;font-weight:600;color:var(--ink-2);border-bottom:1px solid var(--ink)}
+.cap-tbl .num{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.cap-tbl tfoot th,.cap-tbl tfoot td{border-bottom:0;font-weight:600}
+.sw{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:8px;vertical-align:-1px}
+/* sayı kutucukları */
+.tiles4{display:grid;grid-template-columns:1fr 1fr;margin-top:14px;border-top:1px solid var(--ink);border-left:1px solid var(--ink)}
+.tiles4 > div{padding:14px 14px 16px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink);min-width:0}
+.tiles4 dt{font-size:13px;font-weight:600;color:var(--ink-2)}
+.tiles4 dt sup{font-family:var(--f-mono);margin-left:2px}
+.tiles4 dd{font:600 21px/1.2 var(--f-display);font-variant-numeric:tabular-nums lining-nums;margin-top:6px;white-space:nowrap}
+@media (min-width:480px){.tiles4 dd{font-size:28px}}
+@media (min-width:1240px){.tiles4{grid-template-columns:repeat(4,minmax(0,1fr))}.tiles4 dd{font-size:30px}}
+.fn{margin-top:12px;font-size:13px;color:var(--ink-2);max-width:860px}
+.fn li{display:grid;grid-template-columns:18px minmax(0,1fr);padding:2px 0}
+.fn li > span:first-child{font-family:var(--f-mono)}
+/* operasyon kuyruğu */
+.ops{width:100%;border-collapse:collapse;margin-top:12px;font-size:14px}
+.ops th,.ops td{text-align:left;vertical-align:top;padding:12px 14px 12px 0;border-bottom:1px dashed var(--ink-2)}
+.ops thead th{font-size:12px;font-weight:600;color:var(--ink-2);border-bottom:1px solid var(--ink);padding-bottom:8px}
+.ops .num{font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.ops .kind{font-weight:600}
+.ops td:last-child,.ops th:last-child{padding-right:0}
+.ops .btn{white-space:nowrap}
+.res{display:inline-flex;align-items:center;gap:6px;font-weight:600;border:1px solid currentColor;padding:2px 8px 2px 6px;white-space:nowrap}
+.res .ico{width:16px;height:16px;stroke-width:2.4}
+.res-planned{color:var(--info);border-style:dashed}
+.res-attempted{color:var(--warn);border-style:dotted}
+.res-succeeded{color:var(--ok)}
+.res-failed{color:var(--err);border-width:2px}
+.res-note{display:block;color:var(--ink-2);font-size:13px;margin-top:4px}
+.res-act{display:block;font-size:12px;font-weight:600;color:var(--ink-2);margin-bottom:4px}
+@media (max-width:899px){
+  .ops thead{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+  .ops,.ops tbody,.ops tr,.ops td,.ops th{display:block}
+  .ops tr{padding:14px 0;border-bottom:1px solid var(--ink)}
+  .ops tbody th,.ops td{border:0;padding:3px 0 3px 112px;position:relative;min-height:26px}
+  .ops td::before,.ops tbody th::before{content:attr(data-l);position:absolute;left:0;top:4px;width:104px;font-size:12px;font-weight:600;color:var(--ink-2)}
+  .ops td.act{padding-left:0;padding-top:8px}
+  .ops td.act::before{content:none}
+  .ops td.act:empty{display:none}
+}
+
+/* ---------------------------------------------------------------- 8 · kapı */
+.gate{color:var(--g-fg);padding:0 0 40px}
+.gate :focus-visible{outline-color:var(--g-fg)}
+.gate-col{max-width:480px;margin:0 auto;padding:14px 16px 0}
+.gate-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:4px 12px;padding-bottom:10px;border-bottom:1px solid var(--g-fg)}
+.gate-head .wordmark{font-size:22px;min-height:0}
+.gate h1{font:600 22px/1.2 var(--f-display);margin-top:10px}
+.gate .ctx{margin-top:2px}
+.gate .when,.gate .g-meta{color:var(--g-dim);font-size:14px}
+.gres{margin-top:14px;min-height:46vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:8px;padding:22px 16px;border:1px solid var(--g-dim)}
+.gres-ico{width:76px;height:76px;display:grid;place-items:center;border:3px solid currentColor;border-radius:50%}
+.gres-ico .ico{width:44px;height:44px;stroke-width:2.6}
+.gres-word{font:800 clamp(34px,10.5vw,54px)/1.02 var(--f-ui);letter-spacing:.01em;margin:4px 0 0}
+.gres-label{font:600 24px/1.2 var(--f-mono)}
+.gres-info{font-size:17px;line-height:1.4;max-width:30ch}
+.gres-code{font:500 13px/1.4 var(--f-mono);color:inherit;opacity:.9}
+.gres[data-r="idle"] .gres-word{font-weight:600;font-size:28px;color:var(--g-fg)}
+.gres[data-r="idle"] .gres-ico{border-style:dotted;color:var(--g-dim)}
+.gres[data-r="accepted"]{background:#BDEBCB;color:#10200F;border-color:#BDEBCB}
+.gres[data-r="accepted"] .gres-word{font-size:clamp(52px,17vw,76px)}
+.gres[data-r="accepted"] .gres-ico{background:#10200F;border-color:#10200F}
+.gres[data-r="accepted"] .gres-ico .ico{color:#BDEBCB}
+.gres[data-r="used"]{border:3px solid #F2B63D;background:repeating-linear-gradient(135deg,#2A2000 0 14px,#4A3800 14px 28px)}
+.gres[data-r="used"] .gres-ico{color:#F2B63D;background:var(--g-bg);border-radius:8px}
+.gres[data-r="invalid"]{border:10px solid #FF8E7E}
+.gres[data-r="invalid"] .gres-ico{color:#FF8E7E;border-radius:0;border-width:5px}
+.gres[data-r="offline"]{border:5px dashed var(--g-fg)}
+.gres[data-r="offline"] .gres-ico{border:0;border-radius:0;width:84px;height:84px}
+.gres[data-r="offline"] .gres-ico .ico{width:76px;height:76px;stroke-width:1.8}
+.g-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:56px;padding:0 20px;border:2px solid var(--g-fg);border-radius:2px;background:transparent;color:var(--g-fg);font-weight:600;font-size:17px;cursor:pointer;width:100%}
+.g-btn:hover{background:#26231E}
+.g-btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.g-btn.pri:hover{background:var(--accent-dk)}
+.gres .g-btn{margin-top:10px;max-width:340px;border-color:currentColor;color:inherit}
+.gres[data-r="accepted"] .g-btn:hover{background:#A6DDB7}
+.scan{margin-top:16px;border:1px solid var(--g-dim);padding:16px;display:grid;gap:12px;justify-items:center;text-align:center}
+.vf{width:100%;max-width:260px;aspect-ratio:1;position:relative;display:grid;place-items:center;color:var(--g-dim);font-size:14px;padding:26px}
+.vf::before,.vf::after{content:"";position:absolute;inset:0;pointer-events:none}
+.vf::before{background:
+  linear-gradient(var(--g-fg),var(--g-fg)) 0 0/44px 4px no-repeat,linear-gradient(var(--g-fg),var(--g-fg)) 0 0/4px 44px no-repeat,
+  linear-gradient(var(--g-fg),var(--g-fg)) 100% 0/44px 4px no-repeat,linear-gradient(var(--g-fg),var(--g-fg)) 100% 0/4px 44px no-repeat}
+.vf::after{background:
+  linear-gradient(var(--g-fg),var(--g-fg)) 0 100%/44px 4px no-repeat,linear-gradient(var(--g-fg),var(--g-fg)) 0 100%/4px 44px no-repeat,
+  linear-gradient(var(--g-fg),var(--g-fg)) 100% 100%/44px 4px no-repeat,linear-gradient(var(--g-fg),var(--g-fg)) 100% 100%/4px 44px no-repeat}
+.g-form{margin-top:16px;display:grid;gap:8px}
+.g-form label,.gate .lbl{font-size:14px;font-weight:600}
+.g-form input,.gate select{min-height:56px;width:100%;background:var(--g-bg);color:var(--g-fg);border:2px solid var(--g-fg);border-radius:2px;padding:0 12px;font:500 18px var(--f-mono);min-width:0}
+.gate select{font:500 15px var(--f-ui)}
+.g-err{color:#FFB3A7;font-weight:600;font-size:15px;display:flex;gap:6px;align-items:center}
+.g-err:empty{display:none}
+.g-hint{color:var(--g-dim);font-size:14px}
+.gate .demo-set{margin-top:22px;border-color:var(--g-dim)}
+.gate .opt span{border-color:var(--g-fg);min-height:48px}
+.gate .opt input:checked + span{background:var(--g-fg);color:var(--g-bg)}
+.gate .opt input:checked + span::before{box-shadow:inset 0 0 0 2.5px var(--g-fg)}
+.gate .opt input:focus-visible + span{outline-color:var(--g-fg)}
+.gate .field{margin-top:12px}
+
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none !important;animation:none !important;scroll-behavior:auto !important}}
+@media (forced-colors:active){.seg,.sw,.lg-sel{forced-color-adjust:none}}
+</style>
+</head>
+<body>
+<a class="skip" href="#main" id="skip">İçeriğe geç</a>
+
+<!-- ikon seti (satır içi; ağ isteği yok) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-cross" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-warn" viewBox="0 0 24 24"><path d="M12 3.5L22 20.5H2z"/><path d="M12 10v5M12 17.7v.1"/></symbol>
+    <symbol id="i-repeat" viewBox="0 0 24 24"><path d="M4.5 12a7.5 7.5 0 1 0 2.4-5.5"/><path d="M4.5 4v4.5H9"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-dots" viewBox="0 0 24 24"><path d="M6 12h.1M12 12h.1M18 12h.1" stroke-width="3.2"/></symbol>
+    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 11v5.5M12 7.6v.1"/></symbol>
+    <symbol id="i-planned" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/></symbol>
+    <symbol id="i-half" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7.5"/><path d="M12 4.5a7.5 7.5 0 0 1 0 15z" fill="currentColor"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M6 12h12"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M6 12h12M12 6v12"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+    <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V5h3M17 5h3v3M20 16v3h-3M7 19H4v-3M4 12h16"/></symbol>
+    <pattern id="hatch" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <rect width="4" height="4" fill="#F5F0E6"/><line x1="0" y1="0" x2="0" y2="4" stroke="#5A544A" stroke-width="1.8"/>
+    </pattern>
+  </defs>
+</svg>
+
+<!-- ============================ prototip gezgini ============================ -->
+<div class="proto" role="region" aria-label="Prototip gezgini">
+  <div class="wrap proto-in">
+    <span class="proto-tag">LOCA · PROTOTİP</span>
+    <span class="proto-note">Statik prototip — gerçek API'ye bağlı değil. Eylemler yalnız ekran durumunu değiştirir; tüm veriler sentetiktir.</span>
+    <nav class="proto-links" aria-label="Prototip ekranları" id="proto-links"></nav>
+    <div class="proto-pick">
+      <label for="proto-select">Ekran</label>
+      <select id="proto-select"></select>
+    </div>
+  </div>
+</div>
+<noscript><p style="padding:16px">Bu prototip ekranlar arasında geçiş ve durum değişiklikleri için JavaScript kullanır.</p></noscript>
+
+<main id="main" tabindex="-1">
+
+<!-- ================================ MÜŞTERİ ================================ -->
+<div class="app" id="app-musteri" hidden>
+  <div class="app-head">
+    <div class="wrap app-head-in">
+      <a class="wordmark" href="#kesif">Loca</a>
+      <nav class="app-nav" aria-label="Müşteri gezinmesi">
+        <a href="#kesif" data-nav="kesif">Keşif</a>
+        <a href="#bilet" data-nav="bilet">Biletlerim</a>
+      </nav>
+      <span class="who">Deniz A. · sentetik hesap</span>
+    </div>
+  </div>
+
+  <!-- 1 · Keşif -->
+  <section class="screen screen-pad" id="kesif" aria-labelledby="h-kesif" hidden>
+    <div class="wrap">
+      <p class="eyebrow"><span class="demo-tag">Demo verisi</span><span>Müşteri · Keşif</span></p>
+      <h1 id="h-kesif" tabindex="-1">Yaklaşan seanslar</h1>
+      <p class="lede">Saatler seansın kendi saat diliminde gösterilir.</p>
+
+      <form class="filters" id="filters" aria-label="Seans filtreleri" onsubmit="return false">
+        <div class="field"><label for="f-city">Şehir</label>
+          <select id="f-city"><option value="">Tüm şehirler</option><option>Ankara</option><option>İstanbul</option><option>İzmir</option></select></div>
+        <div class="field"><label for="f-cat">Kategori</label>
+          <select id="f-cat"><option value="">Tüm kategoriler</option><option>Çocuk</option><option>Gösteri</option><option>Konser</option><option>Tiyatro</option></select></div>
+        <div class="field"><label for="f-from">Başlangıç tarihi</label><input type="date" id="f-from" min="2026-11-01" max="2026-12-31"></div>
+        <div class="field"><label for="f-to">Bitiş tarihi</label><input type="date" id="f-to" min="2026-11-01" max="2026-12-31"></div>
+        <button type="button" class="btn" id="f-clear">Filtreleri temizle</button>
+      </form>
+
+      <p class="count" id="f-count" role="status"></p>
+      <ol class="rows" id="rows"></ol>
+      <div class="empty" id="rows-empty" hidden>
+        <p><strong>Bu filtrelerle seans bulunamadı.</strong> Tarih aralığını genişletmeyi veya şehir ve kategori seçimini kaldırmayı dene.</p>
+        <button type="button" class="btn" id="f-clear2">Filtreleri temizle</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 · Koltuk seçimi -->
+  <section class="screen" id="koltuk" aria-labelledby="h-koltuk" hidden>
+    <div class="wrap">
+      <p class="eyebrow"><span class="demo-tag">Demo verisi</span><span>Müşteri · Koltuk seçimi</span></p>
+      <h1 id="h-koltuk" tabindex="-1" data-s="title"></h1>
+      <p class="ctx"><span class="when" data-s="when"></span><span class="venue" data-s="venue"></span></p>
+
+      <ul class="legend" aria-label="Koltuk durumları">
+        <li><span class="lg lg-free" aria-hidden="true"></span>Boş</li>
+        <li><span class="lg lg-sel" aria-hidden="true"><svg class="ico"><use href="#i-check"/></svg></span>Seçili</li>
+        <li><span class="lg lg-taken" aria-hidden="true"></span>Dolu</li>
+        <li class="t-mute">En fazla 6 koltuk</li>
+      </ul>
+
+      <div class="seat-grid">
+        <div>
+          <h2 id="h-plan">Salon planı</h2>
+          <div class="plan" id="plan" aria-hidden="true"></div>
+          <p class="plan-cap">Plan fare ve dokunma içindir. Klavye ve ekran okuyucu için koltuk listesini kullan; ikisi aynı seçimi gösterir. Müsaitlik ipucudur, kesin sonuç “Koltukları tut” adımında belli olur.</p>
+        </div>
+        <div class="seatlist">
+          <h2 id="h-list">Koltuk listesi</h2>
+          <p class="note">Sıra bazında gruplanmıştır. Dolu koltuklar seçilemez.</p>
+          <div id="seatlist" role="group" aria-labelledby="h-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sumbar" role="region" aria-label="Seçim özeti">
+      <div class="wrap sumbar-in">
+        <div class="sum-sel"><span class="sum-k">Seçilen koltuklar · <span id="seat-count" class="mono"></span></span><span class="sum-labels" id="seat-labels"></span></div>
+        <div class="sum-total"><span class="sum-k">Toplam</span><strong id="seat-total"></strong></div>
+        <button type="button" class="btn btn-primary" id="seat-hold">Koltukları tut</button>
+        <p class="sum-msg" id="seat-msg" role="alert"></p>
+      </div>
+    </div>
+    <p class="sr-only" id="seat-live" role="status"></p>
+  </section>
+
+  <!-- 3 · Genel giriş -->
+  <section class="screen" id="genel-giris" aria-labelledby="h-ga" hidden>
+    <div class="wrap">
+      <p class="eyebrow"><span class="demo-tag">Demo verisi</span><span>Müşteri · Genel giriş</span></p>
+      <h1 id="h-ga" tabindex="-1" data-s="title"></h1>
+      <p class="ctx"><span class="when" data-s="when"></span><span class="venue" data-s="venue"></span></p>
+      <p class="lede">Numarasız seans. Kategori başına adet seç; tek siparişte en fazla 6 bilet.</p>
+      <ul class="cats" id="cats"></ul>
+      <p class="note" style="margin-top:12px">Kalan adetler ipucudur; kesin sonuç “Biletleri tut” adımında belli olur.</p>
+    </div>
+    <div class="sumbar" role="region" aria-label="Seçim özeti">
+      <div class="wrap sumbar-in">
+        <div class="sum-sel"><span class="sum-k">Seçilen biletler · <span id="ga-count" class="mono"></span></span><span class="sum-labels" id="ga-labels"></span></div>
+        <div class="sum-total"><span class="sum-k">Toplam</span><strong id="ga-total"></strong></div>
+        <button type="button" class="btn btn-primary" id="ga-hold">Biletleri tut</button>
+        <p class="sum-msg" id="ga-msg" role="alert"></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · Hold + ödeme -->
+  <section class="screen screen-pad" id="odeme" aria-labelledby="h-odeme" hidden>
+    <div class="wrap">
+      <p class="eyebrow"><span class="demo-tag">Demo verisi</span><span>Müşteri · Rezervasyon ve ödeme</span></p>
+      <h1 id="h-odeme" tabindex="-1">Ödeme</h1>
+      <p class="ctx"><strong data-s="title"></strong><span class="when" data-s="when"></span><span class="venue" data-s="venue"></span></p>
+
+      <div class="pay-grid">
+        <div>
+          <div class="timer" id="timer">
+            <span class="timer-val" id="timer-val" role="timer" aria-live="off" aria-label="Kalan süre">10:00</span>
+            <span class="timer-k"><span id="timer-k">Rezervasyon için kalan süre</span> <span class="status t-warn timer-flag"><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg><span id="timer-flag"></span></span></span>
+            <span class="timer-sub" id="timer-sub">Seçimin süre bitene kadar başkasına verilmez. Bu bir satın alma değildir; ödeme başarısı garanti edilmez.</span>
+          </div>
+          <p class="sr-only" id="timer-live" aria-live="polite"></p>
+          <p class="note" style="margin-top:8px">Sayaç yalnız gösterimdir; süre sunucu saatine göre biter.</p>
+
+          <table class="lines">
+            <caption>Rezervasyon satırları</caption>
+            <thead><tr><th scope="col">Satır</th><th scope="col" class="num">Adet</th><th scope="col" class="num">Birim</th><th scope="col" class="num">Tutar</th></tr></thead>
+            <tbody id="hold-lines"></tbody>
+            <tfoot><tr><th scope="row" colspan="3">Toplam (TRY)</th><td class="num" id="hold-total"></td></tr></tfoot>
+          </table>
+
+          <fieldset class="demo-set" style="margin-top:24px">
+            <legend><span class="demo-tag">Demo</span> Sayaç durumu</legend>
+            <p class="note">Sayacın farklı anlarını incelemek için. Gerçek arayüzde süreyi yalnız sunucu belirler.</p>
+            <div class="opts">
+              <button type="button" class="btn" data-timer="600">10:00</button>
+              <button type="button" class="btn" data-timer="125">02:05</button>
+              <button type="button" class="btn" data-timer="35">00:35</button>
+              <button type="button" class="btn" data-timer="3">00:03</button>
+            </div>
+          </fieldset>
+        </div>
+
+        <form class="pay-form" id="pay-form" onsubmit="return false">
+          <div id="pay-live">
+            <h2>Ödeme yöntemi</h2>
+            <div class="method" style="margin-top:10px">
+              <svg class="ico" aria-hidden="true" style="margin-top:2px"><use href="#i-info"/></svg>
+              <p><strong>Simüle kart</strong> — demo ödeme sağlayıcısı. Gerçek kart bilgisi istenmez, gerçek tahsilat yapılmaz.</p>
+            </div>
+
+            <fieldset class="demo-set" style="margin-top:18px">
+              <legend><span class="demo-tag">Demo</span> Ödeme sağlayıcı senaryosu</legend>
+              <p class="note">Yalnız demo simülatörü açık seanslarda görünür.</p>
+              <div class="scn" id="scn">
+                <label><input type="radio" name="scn" value="basari" checked><span>Başarı<small>Tahsilat onaylanır, biletler oluşur.</small></span></label>
+                <label><input type="radio" name="scn" value="ret"><span>Ret<small>Sağlayıcı ödemeyi reddeder; tahsilat yapılmaz.</small></span></label>
+                <label><input type="radio" name="scn" value="belirsiz"><span>Belirsiz (zaman aşımı)<small>Kesin yanıt gelmez; sonuç sonradan doğrulanır.</small></span></label>
+                <label><input type="radio" name="scn" value="asenkron"><span>Asenkron<small>Sonuç gecikmeli bildirimle gelir.</small></span></label>
+                <label><input type="radio" name="scn" value="gec"><span>Geç başarı<small>Tahsilat bildirimi süre dolduktan sonra gelir; tutar iade edilir.</small></span></label>
+              </div>
+            </fieldset>
+
+            <div class="pay-actions" style="margin-top:18px">
+              <button type="button" class="btn btn-primary" id="pay-go">Ödemeyi başlat · <span class="mono" id="pay-amount"></span></button>
+              <button type="button" class="btn" id="pay-release">Rezervasyonu bırak</button>
+            </div>
+            <p class="note" style="margin-top:10px">“Ödemeyi başlat” ödemenin alındığı anlamına gelmez; sonuç sipariş durumu ekranında izlenir.</p>
+          </div>
+          <div id="pay-expired" hidden>
+            <h2><span class="status t-warn" style="font:inherit"><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg>Süre doldu</span></h2>
+            <p style="margin-top:8px">Rezervasyon süresi ödeme başlamadan bitti. Seçimin serbest bırakıldı; tahsilat yapılmadı.</p>
+            <div class="pay-actions" style="margin-top:14px"><a class="btn btn-primary" id="pay-reselect" href="#koltuk">Yeniden seç</a></div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · Sipariş durumu -->
+  <section class="screen screen-pad" id="siparis" aria-labelledby="h-siparis" hidden>
+    <div class="wrap">
+      <p class="eyebrow"><span class="demo-tag">Demo verisi</span><span>Müşteri · Sipariş durumu</span></p>
+      <h1 id="h-siparis" tabindex="-1">Sipariş <span class="mono" style="font-size:.72em">LC-7K2M-4QXD</span></h1>
+
+      <fieldset class="demo-set" style="margin-top:18px">
+        <legend><span class="demo-tag">Demo</span> Durum değiştirici</legend>
+        <p class="note" id="ord-hint">Gerçek arayüz durumu sipariş sorgusundan öğrenir; prototipte buradan seçilir.</p>
+        <div class="opts" id="ord-opts">
+          <label class="opt"><input type="radio" name="ord" value="isleniyor" checked><span>Ödeme işleniyor</span></label>
+          <label class="opt"><input type="radio" name="ord" value="odendi"><span>Ödendi</span></label>
+          <label class="opt"><input type="radio" name="ord" value="reddedildi"><span>Reddedildi</span></label>
+          <label class="opt"><input type="radio" name="ord" value="belirsiz"><span>Sonuç belirsiz</span></label>
+          <label class="opt"><input type="radio" name="ord" value="suredoldu"><span>Süre doldu</span></label>
+          <label class="opt"><input type="radio" name="ord" value="iptal"><span>İptal edildi</span></label>
+        </div>
+      </fieldset>
+
+      <div class="order-grid">
+        <div>
+          <div class="ost" id="ost" aria-live="polite"></div>
+          <fieldset class="demo-set ost-sub" id="refund-set" hidden>
+            <legend><span class="demo-tag">Demo</span> İade durumu</legend>
+            <div class="opts">
+              <label class="opt"><input type="radio" name="ref" value="bekliyor" checked><span>İade bekliyor</span></label>
+              <label class="opt"><input type="radio" name="ref" value="tamam"><span>İade tamamlandı</span></label>
+              <label class="opt"><input type="radio" name="ref" value="basarisiz"><span>İade başarısız</span></label>
+            </div>
+          </fieldset>
+        </div>
+        <div class="side">
+          <h2>Sipariş özeti</h2>
+          <dl class="facts">
+            <dt>Etkinlik</dt><dd data-s="title"></dd>
+            <dt>Seans</dt><dd class="when" data-s="when"></dd>
+            <dt>Mekan</dt><dd data-s="venue"></dd>
+            <dt>Satırlar</dt><dd><ul id="ord-lines"></ul></dd>
+            <dt>Toplam</dt><dd class="mono" id="ord-total" style="font-weight:600"></dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · Bilet ayrıntısı -->
+  <section class="screen screen-pad" id="bilet" aria-labelledby="h-bilet" hidden>
+    <div class="wrap">
+      <p class="eyebrow"><span class="demo-tag">Demo verisi</span><span>Müşteri · Biletlerim · Bilet ayrıntısı</span></p>
+      <h1 id="h-bilet" tabindex="-1">Bilet</h1>
+
+      <fieldset class="tk-pick">
+        <legend class="lbl">Bu siparişteki biletler</legend>
+        <div class="opts" id="tk-opts"></div>
+      </fieldset>
+
+      <article class="ticket" aria-labelledby="tk-title">
+        <div class="tk-main">
+          <p class="tk-kicker">LOCA · GİRİŞ BİLETİ</p>
+          <h2 class="tk-title" id="tk-title" data-s="title"></h2>
+          <p class="tk-label" id="tk-label"></p>
+          <dl class="facts tk-facts">
+            <dt>Seans</dt><dd class="when" data-s="when"></dd>
+            <dt>Mekan</dt><dd data-s="venue"></dd>
+            <dt>Durum</dt><dd><span class="status t-ok"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>Geçerli · henüz kullanılmadı</span></dd>
+            <dt>Kapı kontrolü</dt><dd><span data-s="gate"></span> itibarıyla (seanstan 3 saat önce)</dd>
+            <dt>Sipariş</dt><dd class="mono">LC-7K2M-4QXD</dd>
+          </dl>
+        </div>
+        <div class="tk-stub">
+          <div class="qr-ph" role="img" aria-label="QR yer tutucu — gerçek kod değil"><span>QR yer tutucu</span></div>
+          <p class="note">Gerçek kod değil. Uygulamada burada tek kullanımlık giriş kodu yer alır; kişisel veri içermez.</p>
+        </div>
+      </article>
+      <p class="note" style="margin-top:12px;max-width:820px">Kod taşıyana giriş hakkı verir: ekran görüntüsünü paylaşma. Her bilet kapıda yalnız bir kez kabul edilir.</p>
+    </div>
+  </section>
+</div>
+
+<!-- ============================== ORGANİZATÖR ============================== -->
+<div class="app" id="app-organizator" hidden>
+  <div class="app-head">
+    <div class="wrap app-head-in">
+      <span class="wordmark">Loca</span>
+      <span style="flex:1 1 auto"><strong>Organizatör</strong> · Perde Kolektifi</span>
+      <span class="who">Mert Y. · sentetik hesap</span>
+    </div>
+  </div>
+  <section class="screen screen-pad" id="organizator" aria-labelledby="h-org" style="padding-top:0" hidden>
+    <div class="wrap org">
+      <nav class="org-nav" aria-label="Organizatör gezinmesi">
+        <ul>
+          <li><a href="#organizator" aria-current="page">Etkinlikler</a></li>
+          <li><span class="off">Mekanlar <small>prototipte yok</small></span></li>
+          <li><span class="off">Ekip <small>prototipte yok</small></span></li>
+          <li><span class="off">Operasyon <small>prototipte yok</small></span></li>
+        </ul>
+      </nav>
+      <div class="org-main">
+        <p class="eyebrow"><span class="demo-tag">Demo verisi</span><span>Etkinlikler / Kış Uykusundan Önce / Seans</span></p>
+        <h1 id="h-org" tabindex="-1">Seans özeti</h1>
+        <p class="ctx"><strong>Kış Uykusundan Önce</strong><span class="when">20 Kas 2026 Cum 20:30 · Europe/Istanbul</span><span class="venue">Perde Sahnesi, İstanbul</span></p>
+        <ul class="chips" aria-label="Seans özellikleri"><li class="chip">Koltuklu</li><li class="chip">Yayında</li><li class="chip">Demo simülatörü açık</li></ul>
+
+        <!-- kapasite -->
+        <div class="blk">
+          <h2 id="h-cap">Kapasite</h2>
+          <p class="note">116 koltuk · anlık envanter sayaçları</p>
+          <figure class="cap">
+            <div class="cap-plot">
+              <span class="cap-dl sold" aria-hidden="true">Satıldı<b>71</b></span>
+              <span class="cap-dl free" aria-hidden="true">Boş<b>36</b></span>
+              <div class="cap-bar" role="img" aria-label="Kapasite 116 koltuk: 71 satıldı, 9 tutuluyor, 36 boş">
+                <span class="seg sold" style="flex:71 1 0"></span><span class="seg held" style="flex:9 1 0"></span><span class="seg free" style="flex:36 1 0"></span>
+              </div>
+              <span class="cap-dl held" aria-hidden="true" style="left:65.1%">Tutuluyor<b>9</b></span>
+            </div>
+            <table class="cap-tbl">
+              <caption class="sr-only">Kapasite dağılımı</caption>
+              <thead><tr><th scope="col">Durum</th><th scope="col" class="num">Koltuk</th><th scope="col" class="num">Pay</th></tr></thead>
+              <tbody>
+                <tr><th scope="row"><span class="sw" style="background:var(--cap-sold)" aria-hidden="true"></span>Satıldı</th><td class="num">71</td><td class="num">%61,2</td></tr>
+                <tr><th scope="row"><span class="sw" style="background:var(--cap-held)" aria-hidden="true"></span>Tutuluyor</th><td class="num">9</td><td class="num">%7,8</td></tr>
+                <tr><th scope="row"><span class="sw" style="background:var(--cap-free)" aria-hidden="true"></span>Boş</th><td class="num">36</td><td class="num">%31,0</td></tr>
+              </tbody>
+              <tfoot><tr><th scope="row">Kapasite</th><td class="num">116</td><td class="num">%100</td></tr></tfoot>
+            </table>
+            <figcaption class="note" style="margin-top:8px">“Tutuluyor” yalnız süresi dolmamış rezervasyonları sayar. Giriş yapan bilet: <span class="mono">0 / 71</span> (kapı kontrolü henüz açılmadı).</figcaption>
+          </figure>
+        </div>
+
+        <!-- finans -->
+        <div class="blk">
+          <h2>Tahsilat ve iade</h2>
+          <p class="note">TRY · vergi, komisyon ve hakediş hesaplanmaz</p>
+          <dl class="tiles4">
+            <div><dt>Brüt tahsilat<sup>1</sup></dt><dd aria-describedby="fn1">37.500,00&nbsp;₺</dd></div>
+            <div><dt>İade edilen<sup>2</sup></dt><dd aria-describedby="fn2">1.550,00&nbsp;₺</dd></div>
+            <div><dt>Bekleyen iade<sup>3</sup></dt><dd aria-describedby="fn3">1.950,00&nbsp;₺</dd></div>
+            <div><dt>Net<sup>4</sup></dt><dd aria-describedby="fn4">35.950,00&nbsp;₺</dd></div>
+          </dl>
+          <ol class="fn" aria-label="Metrik tanımları">
+            <li id="fn1"><span>1</span><span><strong>Brüt tahsilat:</strong> başarılı ödemelerin tutar toplamı; geç gelen başarılar dahildir.</span></li>
+            <li id="fn2"><span>2</span><span><strong>İade edilen:</strong> başarıyla tamamlanan iadelerin tutar toplamı.</span></li>
+            <li id="fn3"><span>3</span><span><strong>Bekleyen iade:</strong> beklemede veya başarısız iadelerin toplamı; henüz geri ödenmedi.</span></li>
+            <li id="fn4"><span>4</span><span><strong>Net:</strong> brüt tahsilat − iade edilen. Bekleyen iadeler tamamlanana kadar net tutardan düşülmez.</span></li>
+          </ol>
+        </div>
+
+        <!-- operasyon kuyruğu -->
+        <div class="blk">
+          <h2 id="h-ops">Operasyon kuyruğu</h2>
+          <p class="note">Bu seansa ait elle izlenmesi gereken kayıtlar. Her eylemin sonucu ayrı gösterilir: planlandı, denendi, başarılı, başarısız.</p>
+          <table class="ops" role="table" aria-labelledby="h-ops">
+            <thead role="rowgroup"><tr role="row">
+              <th role="columnheader" scope="col">Tür</th><th role="columnheader" scope="col">Sipariş</th><th role="columnheader" scope="col">Tutar</th>
+              <th role="columnheader" scope="col">Ayrıntı</th><th role="columnheader" scope="col">Son eylem ve sonucu</th><th role="columnheader" scope="col">Eylem</th></tr></thead>
+            <tbody role="rowgroup">
+              <tr role="row">
+                <th role="rowheader" scope="row" class="kind" data-l="Tür">Belirsiz ödeme</th>
+                <td role="cell" class="num" data-l="Sipariş">LC-7K2M-4QXD</td>
+                <td role="cell" class="num" data-l="Tutar">900,00&nbsp;₺</td>
+                <td role="cell" data-l="Ayrıntı">Sağlayıcı yanıtı zaman aşımına uğradı; tahsilat durumu bilinmiyor.</td>
+                <td role="cell" data-l="Son eylem" class="rescell"><span class="res-act">Mutabakat</span><span class="res res-attempted"><svg class="ico" aria-hidden="true"><use href="#i-half"/></svg>denendi</span><span class="res-note">Sağlayıcıdan kesin sonuç alınamadı.</span></td>
+                <td role="cell" class="act"><button type="button" class="btn" data-op="Mutabakat">Mutabakatı yeniden dene</button></td>
+              </tr>
+              <tr role="row">
+                <th role="rowheader" scope="row" class="kind" data-l="Tür">Başarısız iade</th>
+                <td role="cell" class="num" data-l="Sipariş">LC-3RXA-9PLT</td>
+                <td role="cell" class="num" data-l="Tutar">600,00&nbsp;₺</td>
+                <td role="cell" data-l="Ayrıntı">Müşteri iptali. Tutar henüz geri ödenmedi.</td>
+                <td role="cell" data-l="Son eylem" class="rescell"><span class="res-act">İade</span><span class="res res-failed"><svg class="ico" aria-hidden="true"><use href="#i-cross"/></svg>başarısız</span><span class="res-note">Sağlayıcı iadeyi reddetti.</span></td>
+                <td role="cell" class="act"><button type="button" class="btn" data-op="İade">İadeyi yeniden dene</button></td>
+              </tr>
+              <tr role="row">
+                <th role="rowheader" scope="row" class="kind" data-l="Tür">Geç başarı telafisi</th>
+                <td role="cell" class="num" data-l="Sipariş">LC-8WQN-2HJC</td>
+                <td role="cell" class="num" data-l="Tutar">450,00&nbsp;₺</td>
+                <td role="cell" data-l="Ayrıntı">Tahsilat bildirimi rezervasyon süresi dolduktan sonra geldi; bilet verilmedi.</td>
+                <td role="cell" data-l="Son eylem" class="rescell"><span class="res-act">Telafi iadesi</span><span class="res res-planned"><svg class="ico" aria-hidden="true"><use href="#i-planned"/></svg>planlandı</span><span class="res-note">Sırada; henüz denenmedi.</span></td>
+                <td role="cell" class="act"></td>
+              </tr>
+              <tr role="row">
+                <th role="rowheader" scope="row" class="kind" data-l="Tür">Belirsiz ödeme</th>
+                <td role="cell" class="num" data-l="Sipariş">LC-5DVB-6MKE</td>
+                <td role="cell" class="num" data-l="Tutar">650,00&nbsp;₺</td>
+                <td role="cell" data-l="Ayrıntı">Tahsilat doğrulandı; bilet verildi.</td>
+                <td role="cell" data-l="Son eylem" class="rescell"><span class="res-act">Mutabakat</span><span class="res res-succeeded"><svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>başarılı</span><span class="res-note">Kayıt kapandı.</span></td>
+                <td role="cell" class="act"></td>
+              </tr>
+            </tbody>
+          </table>
+          <p class="sr-only" id="ops-live" role="status"></p>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ================================== KAPI ================================= -->
+<div class="app" id="app-kapi" hidden>
+  <section class="screen gate" id="kapi" aria-labelledby="h-kapi" hidden>
+    <div class="gate-col">
+      <div class="gate-head">
+        <span class="wordmark">Loca Kapı</span>
+        <span class="demo-tag">Demo verisi</span>
+      </div>
+      <h1 id="h-kapi" tabindex="-1">Kış Uykusundan Önce</h1>
+      <p class="ctx"><span class="when">20 Kas 2026 Cum 20:30 · Europe/Istanbul</span><span class="g-meta">Kapı A · Görevli: Ece K. (sentetik hesap)</span></p>
+
+      <div class="gres" id="gres" data-r="idle" role="status" aria-live="assertive" aria-atomic="true"></div>
+
+      <div class="scan" id="scan">
+        <div class="vf"><span id="vf-text">Kamera kapalı</span></div>
+        <button type="button" class="g-btn" id="cam-btn"><svg class="ico" aria-hidden="true"><use href="#i-scan"/></svg>Kamerayı aç</button>
+      </div>
+
+      <form class="g-form" id="g-form" novalidate>
+        <label for="g-token">Elle token girişi</label>
+        <input id="g-token" name="token" type="text" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" aria-describedby="g-hint g-err">
+        <p class="g-hint" id="g-hint">Kamera kullanılamıyorsa biletin altındaki kodu yaz.</p>
+        <p class="g-err" id="g-err" role="alert"></p>
+        <button type="submit" class="g-btn pri">Kontrol et</button>
+      </form>
+
+      <fieldset class="demo-set">
+        <legend><span class="demo-tag">Demo</span> Sunucu yanıtı</legend>
+        <p class="g-hint">Prototip token doğrulamaz. Sonuç panelini buradan seç; “Kontrol et” seçili yanıtı gösterir.</p>
+        <div class="opts" id="g-opts">
+          <label class="opt"><input type="radio" name="gr" value="idle" checked><span>Hazır</span></label>
+          <label class="opt"><input type="radio" name="gr" value="accepted"><span>Kabul</span></label>
+          <label class="opt"><input type="radio" name="gr" value="used"><span>Zaten kullanıldı</span></label>
+          <label class="opt"><input type="radio" name="gr" value="invalid"><span>Geçersiz</span></label>
+          <label class="opt"><input type="radio" name="gr" value="offline"><span>Bağlantı yok</span></label>
+        </div>
+        <div class="field">
+          <label for="g-reason">Geçersiz nedeni</label>
+          <select id="g-reason">
+            <option value="ticket_not_found">Bilet bulunamadı</option>
+            <option value="wrong_session">Başka seansın bileti</option>
+            <option value="ticket_void">İptal veya iade edilmiş</option>
+            <option value="outside_checkin_window">Giriş penceresi dışında</option>
+            <option value="session_cancelled">Seans iptal edildi</option>
+          </select>
+        </div>
+      </fieldset>
+    </div>
+  </section>
+</div>
+
+</main>
+
+<script>
+(function () {
+  'use strict';
+  var $ = function (s, r) { return (r || document).querySelector(s); };
+  var $$ = function (s, r) { return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+  var NBSP = ' ';
+  function tl(minor) {
+    var whole = String(Math.floor(minor / 100)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return whole + ',' + ('0' + (minor % 100)).slice(-2) + NBSP + '₺';
+  }
+  function ico(id) { return '<svg class="ico" aria-hidden="true"><use href="#' + id + '"/></svg>'; }
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+
+  /* ------------------------------------------------------------ sentetik veri */
+  var TZ = 'Europe/Istanbul';
+  var SESSIONS = [
+    { id: 's1', date: '2026-11-20', day: '20', mon: 'KAS', dow: 'Cum', time: '20:30', gate: '20 Kas 2026 Cum 17:30', title: 'Kış Uykusundan Önce', cat: 'Tiyatro', venue: 'Perde Sahnesi', city: 'İstanbul', mode: 'seat', from: 30000, sale: 'on' },
+    { id: 's2', date: '2026-11-21', day: '21', mon: 'KAS', dow: 'Cmt', time: '15:00', gate: '21 Kas 2026 Cmt 12:00', title: 'Kış Uykusundan Önce', cat: 'Tiyatro', venue: 'Perde Sahnesi', city: 'İstanbul', mode: 'seat', from: 30000, sale: 'on' },
+    { id: 's3', date: '2026-11-21', day: '21', mon: 'KAS', dow: 'Cmt', time: '21:00', gate: '21 Kas 2026 Cmt 18:00', title: 'Rüzgârgülü Kuartet', cat: 'Konser', venue: 'Liman Hangarı', city: 'İzmir', mode: 'ga', from: 22000, sale: 'on' },
+    { id: 's4', date: '2026-11-22', day: '22', mon: 'KAS', dow: 'Paz', time: '20:00', gate: '22 Kas 2026 Paz 17:00', title: 'Rüzgârgülü Kuartet', cat: 'Konser', venue: 'Liman Hangarı', city: 'İzmir', mode: 'ga', from: 22000, sale: 'on' },
+    { id: 's5', date: '2026-11-27', day: '27', mon: 'KAS', dow: 'Cum', time: '20:00', title: 'Gece Vardiyası Stand-up', cat: 'Gösteri', venue: 'Çatı Katı Sahne', city: 'Ankara', mode: 'ga', from: 27500, sale: 'soldout' },
+    { id: 's6', date: '2026-12-05', day: '5', mon: 'ARA', dow: 'Cmt', time: '20:30', title: 'Pusula Orkestrası: Kuzey Şarkıları', cat: 'Konser', venue: 'Eski Depo', city: 'İstanbul', mode: 'seat', from: 55000, sale: 'soon', saleAt: '12 Kas 2026 Per 10:00' },
+    { id: 's7', date: '2026-12-12', day: '12', mon: 'ARA', dow: 'Cmt', time: '14:00', title: 'Kâğıttan Gemiler', cat: 'Çocuk', venue: 'Küçük Salon', city: 'Ankara', mode: 'seat', from: 18000, sale: 'closed' },
+    { id: 's8', date: '2026-12-18', day: '18', mon: 'ARA', dow: 'Cum', time: '21:00', title: 'Tuz ve İs', cat: 'Konser', venue: 'Liman Hangarı', city: 'İzmir', mode: 'ga', from: 30000, sale: 'soon', saleAt: '1 Ara 2026 Sal 12:00' }
+  ];
+  var MONTHS = { KAS: 'Kas', ARA: 'Ara' };
+  function whenOf(s) { return s.day.replace(/^0/, '') + ' ' + MONTHS[s.mon] + ' 2026 ' + s.dow + ' ' + s.time + ' · ' + TZ; }
+  function sessionById(id) { return SESSIONS.filter(function (s) { return s.id === id; })[0]; }
+
+  var SECTIONS = [
+    { name: 'Ön Salon', rows: ['A', 'B', 'C'], n: 12, price: 65000 },
+    { name: 'Salon', rows: ['D', 'E', 'F', 'G'], n: 14, price: 45000 },
+    { name: 'Balkon', rows: ['H', 'J'], n: 12, price: 30000 }
+  ];
+  var CATS = [
+    { id: 'ayakta', name: 'Ayakta', desc: 'Sahne önü, numarasız.', price: 32000, left: 142 },
+    { id: 'tribun', name: 'Tribün', desc: 'Oturmalı, numarasız.', price: 48000, left: 36 },
+    { id: 'ogrenci', name: 'Öğrenci', desc: 'Girişte öğrenci kimliği istenir.', price: 22000, left: 4 },
+    { id: 'erken', name: 'Erken giriş', desc: 'Kapılar bir saat erken açılır.', price: 60000, left: 0 }
+  ];
+  var MAX = 6;
+
+  /* koltuklar: 116 koltuk, 80'i dolu (71 satıldı + 9 tutuluyor), 36'sı boş — organizatör özetiyle tutarlı */
+  var SEATS = [], seatById = {};
+  (function () {
+    var seed = 20261120;
+    function rnd() { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; }
+    SECTIONS.forEach(function (sec) {
+      sec.rows.forEach(function (row) {
+        for (var i = 1; i <= sec.n; i++) {
+          var s = { id: sec.name + '/' + row + '/' + i, sec: sec.name, row: row, no: i, price: sec.price, label: sec.name + ' / ' + row + ' / ' + i, taken: false };
+          SEATS.push(s); seatById[s.id] = s;
+        }
+      });
+    });
+    var keep = { 'Salon/E/7': 1, 'Salon/E/8': 1, 'Salon/E/9': 1, 'Ön Salon/B/6': 1, 'Ön Salon/B/7': 1, 'Balkon/H/3': 1, 'Balkon/H/4': 1 };
+    var i = 0;
+    while (i < SEATS.length) {
+      var run = 2 + Math.floor(rnd() * 5), gap = Math.floor(rnd() * 3);
+      for (var k = 0; k < run && i < SEATS.length; k++, i++) { if (!keep[SEATS[i].id]) SEATS[i].taken = true; }
+      i += gap;
+    }
+    function count() { return SEATS.filter(function (s) { return s.taken; }).length; }
+    var guard = 0;
+    while (count() !== 80 && guard++ < 5000) {
+      var s = SEATS[Math.floor(rnd() * SEATS.length)];
+      if (keep[s.id]) continue;
+      if (count() > 80 && s.taken) s.taken = false; else if (count() < 80 && !s.taken) s.taken = true;
+    }
+  })();
+
+  /* -------------------------------------------------------------------- durum */
+  var state = {
+    seatSession: 's1', gaSession: 's3',
+    seats: ['Salon/E/7', 'Salon/E/8'],
+    ga: { ayakta: 0, tribun: 0, ogrenci: 0, erken: 0 },
+    hold: null, scenario: null, order: 'isleniyor', refund: 'bekliyor', ticket: 0,
+    timerLeft: 600, timerId: null, gate: 'idle', gateTry: 1, gateToken: ''
+  };
+  function seatLines() {
+    return state.seats.map(function (id) { var s = seatById[id]; return { label: s.label, qty: 1, unit: s.price }; });
+  }
+  function gaLines() {
+    return CATS.filter(function (c) { return state.ga[c.id] > 0; }).map(function (c) { return { label: c.name, qty: state.ga[c.id], unit: c.price }; });
+  }
+  function total(lines) { return lines.reduce(function (t, l) { return t + l.qty * l.unit; }, 0); }
+  state.hold = { session: 's1', kind: 'seat', lines: seatLines() };
+
+  /* ------------------------------------------------------------------ gezgin */
+  var SCREENS = [
+    { id: 'kesif', app: 'musteri', grp: 'Müşteri', name: 'Keşif', nav: 'kesif' },
+    { id: 'koltuk', app: 'musteri', grp: 'Müşteri', name: 'Koltuk seçimi', nav: 'kesif' },
+    { id: 'genel-giris', app: 'musteri', grp: 'Müşteri', name: 'Genel giriş', nav: 'kesif' },
+    { id: 'odeme', app: 'musteri', grp: 'Müşteri', name: 'Ödeme', nav: 'kesif' },
+    { id: 'siparis', app: 'musteri', grp: 'Müşteri', name: 'Sipariş durumu', nav: 'bilet' },
+    { id: 'bilet', app: 'musteri', grp: 'Müşteri', name: 'Bilet', nav: 'bilet' },
+    { id: 'organizator', app: 'organizator', grp: 'Organizatör', name: 'Seans özeti' },
+    { id: 'kapi', app: 'kapi', grp: 'Kapı', name: 'Giriş kontrolü' }
+  ];
+  var screenById = {};
+  (function () {
+    var links = $('#proto-links'), sel = $('#proto-select'), og = null, last = '';
+    SCREENS.forEach(function (sc, i) {
+      screenById[sc.id] = sc;
+      var label = sc.grp === 'Müşteri' ? sc.name : sc.grp + ' · ' + sc.name;
+      var a = document.createElement('a');
+      a.href = '#' + sc.id; a.setAttribute('data-screen', sc.id);
+      a.innerHTML = '<span class="n">' + (i + 1) + '</span>' + esc(label);
+      links.appendChild(a);
+      if (sc.grp !== last) { og = document.createElement('optgroup'); og.label = sc.grp; sel.appendChild(og); last = sc.grp; }
+      var o = document.createElement('option'); o.value = sc.id; o.textContent = (i + 1) + ' · ' + sc.name; og.appendChild(o);
+    });
+    sel.addEventListener('change', function () { location.hash = '#' + sel.value; });
+  })();
+
+  var firstRoute = true;
+  function route() {
+    var id = (location.hash || '').slice(1);
+    try { id = decodeURIComponent(id); } catch (e) {}
+    var sc = screenById[id] || SCREENS[0];
+    $$('.app').forEach(function (a) { a.hidden = a.id !== 'app-' + sc.app; });
+    $$('.screen').forEach(function (s) { s.hidden = s.id !== sc.id; });
+    document.body.classList.toggle('dark', sc.app === 'kapi');
+    $$('#proto-links a').forEach(function (a) {
+      if (a.getAttribute('data-screen') === sc.id) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    $('#proto-select').value = sc.id;
+    $$('.app-nav a').forEach(function (a) {
+      if (a.getAttribute('data-nav') === sc.nav) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    });
+    $('#skip').setAttribute('href', '#' + sc.id);
+    document.title = sc.name + ' — Loca prototip';
+    enter(sc.id);
+    if (!firstRoute) {
+      window.scrollTo(0, 0);
+      var h = $('#' + sc.id + ' h1'); if (h) h.focus({ preventScroll: true });
+    }
+    firstRoute = false;
+  }
+  /* "İçeriğe geç" bağlantısı hash yönlendirmesini bozmasın */
+  $('#skip').addEventListener('click', function (e) {
+    e.preventDefault();
+    var h = $('.screen:not([hidden]) h1'); if (h) { h.focus(); h.scrollIntoView(); }
+  });
+
+  function bindSession(screenId, s) {
+    $$('#' + screenId + ' [data-s]').forEach(function (el) {
+      var k = el.getAttribute('data-s');
+      el.textContent = k === 'title' ? s.title : k === 'when' ? whenOf(s) : k === 'venue' ? s.venue + ', ' + s.city : k === 'gate' ? (s.gate || '') : '';
+    });
+  }
+  function enter(id) {
+    stopTimer();
+    if (id === 'koltuk') { bindSession(id, sessionById(state.seatSession)); renderSeats(); }
+    if (id === 'genel-giris') { bindSession(id, sessionById(state.gaSession)); renderGa(); }
+    if (id === 'odeme') { bindSession(id, sessionById(state.hold.session)); renderHold(); startTimer(); }
+    if (id === 'siparis') { bindSession(id, sessionById(state.hold.session)); renderOrder(); }
+    if (id === 'bilet') { bindSession(id, sessionById(state.hold.session)); renderTickets(); }
+    if (id === 'kapi') { renderGate(false); }
+  }
+
+  /* ---------------------------------------------------------------- 1 keşif */
+  var SALE = {
+    on: function () { return '<span class="status t-ok">' + ico('i-check') + 'Satışta</span>'; },
+    soldout: function () { return '<span class="status t-mute">' + ico('i-cross') + 'Tükendi</span>'; },
+    closed: function () { return '<span class="status t-mute">' + ico('i-cross') + 'Satış kapandı</span>'; },
+    soon: function (s) { return '<span class="status t-info">' + ico('i-clock') + 'Satış ' + esc(s.saleAt) + ' itibarıyla açılır</span>'; }
+  };
+  function renderRows() {
+    var city = $('#f-city').value, cat = $('#f-cat').value, from = $('#f-from').value, to = $('#f-to').value;
+    var list = SESSIONS.filter(function (s) {
+      return (!city || s.city === city) && (!cat || s.cat === cat) && (!from || s.date >= from) && (!to || s.date <= to);
+    });
+    $('#rows').innerHTML = list.map(function (s) {
+      var act = '';
+      if (s.sale === 'on') {
+        act = '<a class="btn" href="#' + (s.mode === 'seat' ? 'koltuk' : 'genel-giris') + '" data-pick="' + s.id + '">' +
+          (s.mode === 'seat' ? 'Koltuk seç' : 'Bilet seç') + '<span class="sr-only"> — ' + esc(s.title) + ', ' + esc(whenOf(s)) + '</span>' + ico('i-arrow') + '</a>';
+      }
+      return '<li>' +
+        '<div class="r-date" aria-hidden="true"><span class="r-day">' + s.day + '</span><span class="r-mon">' + s.mon + ' · ' + s.dow.toLocaleUpperCase('tr') + '</span><span class="r-time">' + s.time + '</span></div>' +
+        '<div class="r-main"><h2 class="r-title">' + esc(s.title) + '</h2>' +
+        '<p class="r-meta">' + esc(s.venue) + ', ' + esc(s.city) + ' · ' + esc(s.cat) + ' · ' + (s.mode === 'seat' ? 'Koltuklu' : 'Genel giriş') + '</p>' +
+        '<p class="when">' + esc(whenOf(s)) + '</p></div>' +
+        '<div class="r-sale">' + SALE[s.sale](s) + '<span class="r-price">' + tl(s.from) + ' <small>en düşük fiyat</small></span></div>' +
+        '<div class="r-act">' + act + '</div></li>';
+    }).join('');
+    $('#rows-empty').hidden = list.length > 0;
+    $('#f-count').textContent = list.length ? list.length + ' seans listeleniyor' : 'Seans bulunamadı';
+  }
+  ['f-city', 'f-cat', 'f-from', 'f-to'].forEach(function (id) { $('#' + id).addEventListener('change', renderRows); });
+  function clearFilters() { ['f-city', 'f-cat', 'f-from', 'f-to'].forEach(function (id) { $('#' + id).value = ''; }); renderRows(); $('#f-city').focus(); }
+  $('#f-clear').addEventListener('click', clearFilters);
+  $('#f-clear2').addEventListener('click', clearFilters);
+  $('#rows').addEventListener('click', function (e) {
+    var a = e.target.closest('a[data-pick]'); if (!a) return;
+    var s = sessionById(a.getAttribute('data-pick'));
+    if (s.mode === 'seat') state.seatSession = s.id; else state.gaSession = s.id;
+  });
+
+  /* --------------------------------------------------------- 2 koltuk seçimi */
+  var seatsBuilt = false, svgSeat = {}, boxSeat = {};
+  function buildSeats() {
+    var NS = 'http://www.w3.org/2000/svg', W = 408, CX = 204, P = 24, AISLE = 20, y = 52;
+    var parts = ['<path d="M44 8H364V26Q204 42 44 26Z" fill="none" stroke="#1C1A17" stroke-width="1.4"/>',
+      '<text x="204" y="23" text-anchor="middle" font-size="11" letter-spacing="4" font-weight="600">SAHNE</text>'];
+    var seatParts = [];
+    SECTIONS.forEach(function (sec, si) {
+      if (sec.name === 'Balkon') { parts.push('<line x1="8" x2="' + (W - 8) + '" y1="' + (y - 2) + '" y2="' + (y - 2) + '" stroke="#1C1A17" stroke-width="1" stroke-dasharray="5 4"/>'); y += 6; }
+      parts.push('<text x="8" y="' + (y + 9) + '" font-size="10.5" font-weight="600" letter-spacing="1">' + sec.name.toLocaleUpperCase('tr') + '</text>');
+      parts.push('<text x="' + (W - 8) + '" y="' + (y + 9) + '" font-size="10.5" text-anchor="end">' + tl(sec.price) + '</text>');
+      y += 16;
+      sec.rows.forEach(function (row) {
+        var half = sec.n / 2, x0 = CX - AISLE / 2 - half * P;
+        parts.push('<text x="' + (x0 - 12) + '" y="' + (y + 16) + '" font-size="11" text-anchor="middle">' + row + '</text>');
+        parts.push('<text x="' + (W - x0 + 12) + '" y="' + (y + 16) + '" font-size="11" text-anchor="middle">' + row + '</text>');
+        for (var i = 1; i <= sec.n; i++) {
+          var x = i <= half ? x0 + (i - 1) * P : CX + AISLE / 2 + (i - half - 1) * P;
+          var s = seatById[sec.name + '/' + row + '/' + i];
+          seatParts.push('<g class="seat' + (s.taken ? ' is-taken' : '') + '" data-id="' + esc(s.id) + '" transform="translate(' + x + ',' + y + ')">' +
+            '<title>' + esc(s.label) + ' · ' + tl(s.price) + (s.taken ? ' · dolu' : '') + '</title>' +
+            '<rect class="hit" width="24" height="24"/><rect class="box" x="3" y="3" width="18" height="18" rx="3"/>' +
+            '<path class="tick" d="M7.6 12.4l3 3 5.8-6.6"/></g>');
+        }
+        y += P;
+      });
+      y += 14;
+    });
+    var svg = '<svg xmlns="' + NS + '" viewBox="0 0 ' + W + ' ' + (y - 6) + '" focusable="false">' + parts.join('') + seatParts.join('') + '</svg>';
+    $('#plan').innerHTML = svg;
+    $$('#plan .seat').forEach(function (g) { svgSeat[g.getAttribute('data-id')] = g; });
+    $('#plan').addEventListener('click', function (e) {
+      var g = e.target.closest('.seat'); if (g) toggleSeat(g.getAttribute('data-id'));
+    });
+
+    var html = '';
+    SECTIONS.forEach(function (sec) {
+      html += '<h3><span>' + esc(sec.name) + '</span><span class="mono">' + tl(sec.price) + '</span></h3>';
+      sec.rows.forEach(function (row) {
+        html += '<fieldset class="rowset"><legend>' + esc(sec.name) + ' · ' + row + ' sırası<span class="sr-only">, koltuk başına ' + tl(sec.price) + '</span></legend><div class="tiles">';
+        for (var i = 1; i <= sec.n; i++) {
+          var s = seatById[sec.name + '/' + row + '/' + i];
+          if (i === 1 || i === sec.n / 2 + 1) html += '<span class="half">';
+          html += '<label class="st"><input type="checkbox" value="' + esc(s.id) + '"' + (s.taken ? ' disabled' : '') +
+            ' aria-label="Koltuk ' + i + (s.taken ? ', dolu' : '') + '"><span class="st-box"><span class="st-no">' + i + '</span></span></label>';
+          if (i === sec.n / 2 || i === sec.n) html += '</span>';
+        }
+        html += '</div></fieldset>';
+      });
+    });
+    $('#seatlist').innerHTML = html;
+    $$('#seatlist input').forEach(function (inp) { boxSeat[inp.value] = inp; });
+    $('#seatlist').addEventListener('change', function (e) {
+      if (e.target.matches('input[type=checkbox]')) toggleSeat(e.target.value, e.target.checked);
+    });
+    seatsBuilt = true;
+  }
+  function toggleSeat(id, want) {
+    var s = seatById[id]; if (!s || s.taken) return;
+    var idx = state.seats.indexOf(id), msg = '';
+    if (want === undefined) want = idx < 0;
+    if (!want && idx >= 0) { state.seats.splice(idx, 1); announce(s.label + ' seçimden çıkarıldı.'); }
+    else if (want && idx < 0) {
+      if (state.seats.length >= MAX) msg = 'En fazla ' + MAX + ' koltuk seçebilirsin. Yeni koltuk için önce birini bırak.';
+      else { state.seats.push(id); announce(s.label + ' seçildi.'); }
+    }
+    renderSeats(msg);
+  }
+  function announce(t) {
+    var lines = seatLines();
+    $('#seat-live').textContent = t + ' ' + state.seats.length + ' koltuk, toplam ' + tl(total(lines)) + '.';
+  }
+  function renderSeats(msg) {
+    if (!seatsBuilt) buildSeats();
+    SEATS.forEach(function (s) {
+      var on = state.seats.indexOf(s.id) >= 0;
+      svgSeat[s.id].classList.toggle('is-sel', on);
+      boxSeat[s.id].checked = on;
+    });
+    var lines = seatLines(), n = state.seats.length;
+    $('#seat-count').textContent = n + ' / ' + MAX;
+    $('#seat-labels').innerHTML = n ? spans(lines.map(function (l) { return l.label; })) : 'Henüz koltuk seçmedin.';
+    $('#seat-total').textContent = tl(total(lines));
+    $('#seat-hold').setAttribute('aria-disabled', n ? 'false' : 'true');
+    setMsg('#seat-msg', msg);
+  }
+  function spans(arr) { return arr.map(function (t, i) { return '<span class="sl">' + esc(t) + (i < arr.length - 1 ? ',' : '') + '</span>'; }).join(''); }
+  function setMsg(sel, msg) { $(sel).innerHTML = msg ? ico('i-warn') + '<span>' + esc(msg) + '</span>' : ''; }
+  $('#seat-hold').addEventListener('click', function () {
+    if (!state.seats.length) { setMsg('#seat-msg', 'Önce en az bir koltuk seç.'); return; }
+    state.hold = { session: state.seatSession, kind: 'seat', lines: seatLines() };
+    state.timerLeft = 600; state.scenario = null; state.ticket = 0;
+    location.hash = '#odeme';
+  });
+
+  /* ----------------------------------------------------------- 3 genel giriş */
+  var gaBuilt = false;
+  function gaCount() { return CATS.reduce(function (t, c) { return t + state.ga[c.id]; }, 0); }
+  function renderGa(msg) {
+    if (!gaBuilt) {
+      $('#cats').innerHTML = CATS.map(function (c) {
+        var left = c.left === 0 ? '<span class="status t-mute">' + ico('i-cross') + 'Tükendi</span>'
+          : c.left <= 10 ? '<span class="status t-warn">' + ico('i-warn') + 'Son ' + c.left + ' bilet</span>'
+          : '<span class="t-mute">Yaklaşık ' + c.left + ' bilet kaldı</span>';
+        var ctl = c.left === 0 ? '<span class="t-mute">Seçilemez</span>' :
+          '<div class="stepper" role="group" aria-label="' + esc(c.name) + ' adedi">' +
+          '<button type="button" data-cat="' + c.id + '" data-d="-1" aria-label="' + esc(c.name) + ': bir azalt">' + ico('i-minus') + '</button>' +
+          '<output id="q-' + c.id + '" aria-live="polite">0</output>' +
+          '<button type="button" data-cat="' + c.id + '" data-d="1" aria-label="' + esc(c.name) + ': bir artır">' + ico('i-plus') + '</button></div>';
+        return '<li><div><h2 class="c-name">' + esc(c.name) + '</h2><p class="c-desc">' + esc(c.desc) + '</p><p class="c-left">' + left + '</p></div>' +
+          '<div class="c-price">' + tl(c.price) + '</div><div class="c-ctl">' + ctl + '</div></li>';
+      }).join('');
+      $('#cats').addEventListener('click', function (e) {
+        var b = e.target.closest('button[data-cat]'); if (!b) return;
+        var c = CATS.filter(function (x) { return x.id === b.getAttribute('data-cat'); })[0], d = +b.getAttribute('data-d'), q = state.ga[c.id], m = '';
+        if (d < 0) { if (q > 0) state.ga[c.id] = q - 1; }
+        else if (gaCount() >= MAX) m = 'Tek siparişte en fazla ' + MAX + ' bilet alınabilir.';
+        else if (q >= c.left) m = c.name + ' kategorisinde yalnız ' + c.left + ' bilet kaldı.';
+        else state.ga[c.id] = q + 1;
+        renderGa(m);
+      });
+      gaBuilt = true;
+    }
+    var n = gaCount(), lines = gaLines();
+    CATS.forEach(function (c) {
+      var out = $('#q-' + c.id); if (!out) return;
+      out.textContent = state.ga[c.id];
+      var btns = $$('button[data-cat="' + c.id + '"]');
+      btns[0].setAttribute('aria-disabled', state.ga[c.id] === 0 ? 'true' : 'false');
+      btns[1].setAttribute('aria-disabled', (n >= MAX || state.ga[c.id] >= c.left) ? 'true' : 'false');
+    });
+    $('#ga-count').textContent = n + ' / ' + MAX;
+    $('#ga-labels').innerHTML = n ? spans(lines.map(function (l) { return l.qty + ' × ' + l.label; })) : 'Henüz bilet seçmedin.';
+    $('#ga-total').textContent = tl(total(lines));
+    $('#ga-hold').setAttribute('aria-disabled', n ? 'false' : 'true');
+    setMsg('#ga-msg', msg);
+  }
+  $('#ga-hold').addEventListener('click', function () {
+    if (!gaCount()) { setMsg('#ga-msg', 'Önce en az bir bilet seç.'); return; }
+    state.hold = { session: state.gaSession, kind: 'ga', lines: gaLines() };
+    state.timerLeft = 600; state.scenario = null; state.ticket = 0;
+    location.hash = '#odeme';
+  });
+
+  /* ---------------------------------------------------------- 4 hold + ödeme */
+  function renderHold() {
+    var h = state.hold;
+    $('#hold-lines').innerHTML = h.lines.map(function (l) {
+      return '<tr><th scope="row">' + esc(l.label) + '</th><td class="num">' + l.qty + '</td><td class="num">' + tl(l.unit) + '</td><td class="num">' + tl(l.qty * l.unit) + '</td></tr>';
+    }).join('');
+    $('#hold-total').textContent = tl(total(h.lines));
+    $('#pay-amount').textContent = tl(total(h.lines));
+    $('#pay-reselect').setAttribute('href', h.kind === 'seat' ? '#koltuk' : '#genel-giris');
+    paintTimer();
+  }
+  function mmss(t) { return ('0' + Math.floor(t / 60)).slice(-2) + ':' + ('0' + (t % 60)).slice(-2); }
+  function paintTimer() {
+    var t = state.timerLeft, box = $('#timer'), out = t <= 0;
+    $('#timer-val').textContent = mmss(Math.max(t, 0));
+    box.classList.toggle('is-low', t > 0 && t <= 120);
+    box.classList.toggle('is-out', out);
+    $('#timer-flag').textContent = out ? 'Süre doldu' : 'Süre azalıyor';
+    $('#timer-k').textContent = out ? 'Rezervasyon sona erdi' : 'Rezervasyon için kalan süre';
+    $('#timer-sub').textContent = out ? 'Seçimin serbest bırakıldı. Devam etmek için yeniden seçim yap.'
+      : 'Seçimin süre bitene kadar başkasına verilmez. Bu bir satın alma değildir; ödeme başarısı garanti edilmez.';
+    $('#pay-live').hidden = out; $('#pay-expired').hidden = !out;
+  }
+  function tick() {
+    if (state.timerLeft > 0) state.timerLeft--;
+    if (state.timerLeft === 120) $('#timer-live').textContent = 'Rezervasyonun bitmesine 2 dakika kaldı.';
+    if (state.timerLeft === 30) $('#timer-live').textContent = 'Rezervasyonun bitmesine 30 saniye kaldı.';
+    if (state.timerLeft === 0) { $('#timer-live').textContent = 'Rezervasyon süresi doldu.'; stopTimer(); }
+    paintTimer();
+  }
+  function startTimer() { stopTimer(); if (state.timerLeft > 0) state.timerId = setInterval(tick, 1000); }
+  function stopTimer() { if (state.timerId) { clearInterval(state.timerId); state.timerId = null; } }
+  $$('[data-timer]').forEach(function (b) {
+    b.addEventListener('click', function () { state.timerLeft = +b.getAttribute('data-timer'); $('#timer-live').textContent = ''; paintTimer(); startTimer(); });
+  });
+  var SCN = {
+    basari: ['Başarı', 'Ödendi'], ret: ['Ret', 'Reddedildi'], belirsiz: ['Belirsiz (zaman aşımı)', 'Sonuç belirsiz'],
+    asenkron: ['Asenkron', 'bir süre Ödeme işleniyor, ardından Ödendi'], gec: ['Geç başarı', 'Süre doldu (gelen tahsilat iade edilir)']
+  };
+  $('#pay-go').addEventListener('click', function () {
+    state.scenario = $('input[name=scn]:checked').value;
+    state.order = 'isleniyor';
+    location.hash = '#siparis';
+  });
+  $('#pay-release').addEventListener('click', function () {
+    var back = state.hold.kind === 'seat' ? '#koltuk' : '#genel-giris';
+    state.timerLeft = 600;
+    location.hash = back;
+  });
+
+  /* ------------------------------------------------------- 5 sipariş durumu */
+  function ticketCount() { return state.hold.lines.reduce(function (t, l) { return t + l.qty; }, 0); }
+  function orderView() {
+    var amt = tl(total(state.hold.lines)), n = ticketCount(), re = state.hold.kind === 'seat' ? '#koltuk' : '#genel-giris';
+    var V = {
+      isleniyor: { tone: 'info', icon: 'i-dots', title: 'Ödeme işleniyor', busy: true,
+        body: ['Ödeme sağlayıcısının sonucu bekleniyor. Henüz tahsilat onayı yok; biletler ödeme onaylanınca oluşur.', 'Bu sayfayı kapatabilirsin: sonuç sipariş kaydına işlenir. Yeniden ödeme başlatma.'], actions: '' },
+      odendi: { tone: 'ok', icon: 'i-check', title: 'Ödendi',
+        body: [amt + ' tahsil edildi. ' + n + ' bilet hazır.', 'Seans başlangıcından 24 saat öncesine kadar, hiçbir bilet kullanılmadıysa siparişin tamamını iptal edebilirsin.'],
+        actions: '<a class="btn btn-primary" href="#bilet">Biletleri gör' + ico('i-arrow') + '</a><button type="button" class="btn" data-ord="iptal">Siparişi iptal et</button>' },
+      reddedildi: { tone: 'err', icon: 'i-cross', title: 'Reddedildi',
+        body: ['Ödeme sağlayıcısı ödemeyi reddetti. Tahsilat yapılmadı ve bilet oluşmadı.', 'Yeniden denemek için seçim adımına dön; müsaitlik değişmiş olabilir.'],
+        actions: '<a class="btn btn-primary" href="' + re + '">Yeniden seç</a>' },
+      belirsiz: { tone: 'warn', icon: 'i-warn', title: 'Sonuç belirsiz',
+        body: ['Ödeme sağlayıcısından kesin yanıt alınamadı. Tahsilat yapılmış da olabilir, yapılmamış da.', 'Yeniden ödeme yapma. Sonuç doğrulandığında bu ekran güncellenir; tahsilat yapıldığı hâlde bilet verilemezse tutar iade edilir.'], actions: '' },
+      suredoldu: { tone: 'mute', icon: 'i-clock', title: 'Süre doldu',
+        body: ['Rezervasyon süresi ödeme onaylanmadan bitti. Seçimin serbest bırakıldı; bilet oluşmadı.', 'Sonradan bir tahsilat bildirimi gelirse tutarın tamamı iade edilir.'],
+        actions: '<a class="btn btn-primary" href="' + re + '">Yeniden seç</a>' }
+    };
+    var R = {
+      bekliyor: { tone: 'info', icon: 'i-dots', title: 'İptal edildi · iade bekliyor', body: ['Sipariş iptal edildi; biletler artık geçersiz.', amt + ' tutarındaki iade sırada. Tutar henüz geri ödenmedi.'] },
+      tamam: { tone: 'ok', icon: 'i-check', title: 'İptal edildi · iade tamamlandı', body: ['Sipariş iptal edildi; biletler artık geçersiz.', amt + ' ödeme yöntemine iade edildi.'] },
+      basarisiz: { tone: 'err', icon: 'i-cross', title: 'İptal edildi · iade başarısız', body: ['Sipariş iptal edildi; biletler artık geçersiz.', 'İade denemesi başarısız oldu. ' + amt + ' henüz geri ödenmedi; iade yeniden denenecek ve organizatörün operasyon kuyruğunda izleniyor.'] }
+    };
+    if (state.order === 'iptal') { var r = R[state.refund]; r.actions = ''; return r; }
+    return V[state.order];
+  }
+  function renderOrder() {
+    var v = orderView(), box = $('#ost');
+    box.setAttribute('data-tone', v.tone);
+    if (v.busy) box.setAttribute('aria-busy', 'true'); else box.removeAttribute('aria-busy');
+    box.innerHTML = '<div class="ost-head"><span class="ost-ico">' + ico(v.icon) + '</span><div><p class="ost-code">Sipariş durumu</p><h2 class="ost-title">' + esc(v.title) + '</h2></div></div>' +
+      '<div class="ost-body">' + v.body.map(function (p) { return '<p>' + esc(p) + '</p>'; }).join('') + '</div>' +
+      (v.actions ? '<div class="ost-actions">' + v.actions + '</div>' : '');
+    $('#refund-set').hidden = state.order !== 'iptal';
+    $$('input[name=ord]').forEach(function (i) { i.checked = i.value === state.order; });
+    $$('input[name=ref]').forEach(function (i) { i.checked = i.value === state.refund; });
+    $('#ord-lines').innerHTML = state.hold.lines.map(function (l) { return '<li>' + l.qty + ' × ' + esc(l.label) + ' — ' + tl(l.qty * l.unit) + '</li>'; }).join('');
+    $('#ord-total').textContent = tl(total(state.hold.lines));
+    $('#ord-hint').textContent = state.scenario
+      ? 'Ödeme ekranında seçilen senaryo: ' + SCN[state.scenario][0] + '. Beklenen sonuç: ' + SCN[state.scenario][1] + '. Prototip sonucu kendisi üretmez; buradan seç.'
+      : 'Gerçek arayüz durumu sipariş sorgusundan öğrenir; prototipte buradan seçilir.';
+  }
+  $('#ord-opts').addEventListener('change', function (e) { state.order = e.target.value; renderOrder(); });
+  $('#refund-set').addEventListener('change', function (e) { state.refund = e.target.value; renderOrder(); });
+  $('#ost').addEventListener('click', function (e) {
+    var b = e.target.closest('button[data-ord]'); if (!b) return;
+    state.order = b.getAttribute('data-ord'); state.refund = 'bekliyor'; renderOrder();
+    var c = $('input[name=ord]:checked'); if (c) c.focus();
+  });
+
+  /* ----------------------------------------------------------------- 6 bilet */
+  function tickets() {
+    var out = [];
+    state.hold.lines.forEach(function (l) {
+      for (var i = 1; i <= l.qty; i++) out.push(l.qty > 1 ? l.label + ' · ' + i + '/' + l.qty : l.label);
+    });
+    return out;
+  }
+  function renderTickets() {
+    var t = tickets(); if (state.ticket >= t.length) state.ticket = 0;
+    $('#tk-opts').innerHTML = t.map(function (lab, i) {
+      return '<label class="opt"><input type="radio" name="tk" value="' + i + '"' + (i === state.ticket ? ' checked' : '') + '><span class="mono">' + esc(lab) + '</span></label>';
+    }).join('');
+    $('#tk-label').textContent = t[state.ticket];
+  }
+  $('#tk-opts').addEventListener('change', function (e) { state.ticket = +e.target.value; $('#tk-label').textContent = tickets()[state.ticket]; });
+
+  /* ----------------------------------------------------------- 7 organizatör */
+  $$('button[data-op]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (b.getAttribute('aria-disabled') === 'true') return;
+      var cell = b.closest('tr').querySelector('.rescell'), op = b.getAttribute('data-op');
+      cell.innerHTML = '<span class="res-act">' + esc(op) + '</span><span class="res res-planned">' + ico('i-planned') + 'planlandı</span>' +
+        '<span class="res-note">Prototip: istek gönderilmedi. Gerçek arayüzde sonraki sonuç (denendi, başarılı veya başarısız) sunucudan gelir.</span>';
+      b.setAttribute('aria-disabled', 'true'); b.textContent = 'Planlandı';
+      $('#ops-live').textContent = op + ' eylemi planlandı olarak işaretlendi. Prototip: istek gönderilmedi.';
+    });
+  });
+
+  /* ------------------------------------------------------------------ 8 kapı */
+  var REASON = {
+    ticket_not_found: 'Bu kodla bilet bulunamadı.',
+    wrong_session: 'Bilet bu seansa ait değil.',
+    ticket_void: 'Bilet iptal veya iade edilmiş.',
+    outside_checkin_window: 'Giriş penceresi dışında. Pencere: 20 Kas 17:30 – 21 Kas 02:30.',
+    session_cancelled: 'Seans iptal edildi.'
+  };
+  function renderGate(focusNext) {
+    var r = state.gate, box = $('#gres'), h = '';
+    box.setAttribute('data-r', r);
+    if (r === 'idle') {
+      h = '<span class="gres-ico">' + ico('i-scan') + '</span><p class="gres-word">Taramaya hazır</p><p class="gres-info">Bileti okut veya kodu elle gir.</p>';
+    } else if (r === 'accepted') {
+      h = '<span class="gres-ico">' + ico('i-check') + '</span><p class="gres-word">KABUL</p><p class="gres-label">Salon / E / 7</p><p class="gres-info">Giriş kaydedildi · 20:04:12 · Kapı A</p>';
+    } else if (r === 'used') {
+      h = '<span class="gres-ico">' + ico('i-repeat') + '</span><p class="gres-word">ZATEN KULLANILDI</p><p class="gres-label">Salon / E / 7</p><p class="gres-info">İlk giriş: 19:52:07 · Kapı B. İçeri alma.</p><p class="gres-code">already_checked_in</p>';
+    } else if (r === 'invalid') {
+      var code = $('#g-reason').value;
+      h = '<span class="gres-ico">' + ico('i-cross') + '</span><p class="gres-word">GEÇERSİZ</p><p class="gres-info">' + esc(REASON[code]) + ' İçeri alma.</p><p class="gres-code">' + esc(code) + '</p>';
+    } else {
+      h = '<span class="gres-ico">' + ico('i-warn') + '</span><p class="gres-word">BAĞLANTI YOK</p><p class="gres-info">Sonuç bilinmiyor — yeniden dene. Giriş onaylanmadı.</p>' +
+        '<p class="gres-code">Deneme ' + state.gateTry + ' · aynı istek anahtarı</p>' +
+        '<button type="button" class="g-btn" id="g-retry">' + ico('i-repeat') + 'Yeniden dene</button>';
+    }
+    if (r !== 'idle' && r !== 'offline') h += '<button type="button" class="g-btn" id="g-next">Sıradaki bilet</button>';
+    box.innerHTML = h;
+    $$('input[name=gr]').forEach(function (i) { i.checked = i.value === r; });
+    if (focusNext) { var n = $('#g-next') || $('#g-retry'); if (n) n.focus(); }
+  }
+  $('#gres').addEventListener('click', function (e) {
+    if (e.target.closest('#g-next')) { state.gate = 'idle'; state.gateTry = 1; $('#g-token').value = ''; renderGate(false); $('#g-token').focus(); }
+    if (e.target.closest('#g-retry')) { state.gateTry++; renderGate(true); }
+  });
+  $('#g-opts').addEventListener('change', function (e) { state.gate = e.target.value; state.gateTry = 1; renderGate(false); });
+  $('#g-reason').addEventListener('change', function () { if (state.gate === 'invalid') renderGate(false); });
+  $('#g-form').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var inp = $('#g-token'), v = inp.value.trim(), err = $('#g-err');
+    if (!v) { err.innerHTML = ico('i-warn') + '<span>Kodu yaz veya bileti okut.</span>'; inp.setAttribute('aria-invalid', 'true'); inp.focus(); return; }
+    inp.removeAttribute('aria-invalid');
+    var picked = $('input[name=gr]:checked').value;
+    if (picked === 'idle') { err.innerHTML = ico('i-info') + '<span>Prototip kodu doğrulamaz. Aşağıdan bir demo yanıtı seç.</span>'; return; }
+    err.innerHTML = '';
+    state.gate = picked; state.gateTry = 1; renderGate(true); window.scrollTo(0, 0);
+  });
+  $('#cam-btn').addEventListener('click', function () {
+    $('#vf-text').textContent = 'Prototipte kamera açılmaz ve izin istenmez. Uygulamada kamera görüntüsü bu alanda yer alır.';
+    this.setAttribute('aria-disabled', 'true');
+  });
+
+  /* ------------------------------------------------------------------ başlat */
+  renderRows();
+  window.addEventListener('hashchange', route);
+  route();
+})();
+</script>
+</body>
+</html>
