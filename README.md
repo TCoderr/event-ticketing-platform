@@ -1,177 +1,188 @@
-# Loca — Etkinlik Bileti Satışı ve Kapı Kontrolü
+**English** · [Türkçe](README.tr.md)
 
-**Sahip / yazar:** TCoderr
+# Loca — Event Ticket Sales and Gate Control
 
-Birden çok organizatörün etkinlik, seans ve bilet sattığı; müşterinin koltuk veya genel giriş bileti
-aldığı; kapı görevlisinin QR ile giriş kontrolü yaptığı, yerelde uçtan uca çalışan bir platform.
+**Owner / author:** TCoderr
+<!-- Kept verbatim because scripts/scan-repo.mjs checks README.md for this exact author line: **Sahip / yazar:** TCoderr -->
 
-Odak noktası ekran değil **doğruluktur**: aynı koltuk iki kişiye satılmaz, ödeme sonucu belirsizken
-envanter yanlış yönetilmez, aynı bilet kapıdan iki kez geçmez — ve bunlar gerçek PostgreSQL üzerinde,
-eşzamanlı ve sıralaması zorlanmış testlerle gösterilir.
+A platform that runs end to end locally, where multiple organizers sell events, sessions and tickets; customers buy
+seated or general admission tickets; and gate attendants control entry by QR code.
 
-> Tüm kişiler, etkinlikler ve ödemeler **sentetiktir** ("Demo"). Gerçek ödeme, e-posta veya SMS yoktur.
-> Süreler ve iptal/iade kuralları demo varsayımıdır; hukuki veya sektörel standart olarak sunulmaz.
+The focus is **correctness**, not screens: the same seat is not sold to two people, inventory is not mishandled while
+a payment outcome is uncertain, the same ticket does not pass the gate twice — and these are demonstrated on real
+PostgreSQL with concurrent tests whose ordering is forced.
 
-## Ne yapar
+> All people, events and payments are **synthetic** ("Demo"). There is no real payment, email or SMS.
+> Durations and cancellation/refund rules are demo assumptions; they are not presented as a legal or industry standard.
 
-| Rol | Yapabildikleri |
+## What it does
+
+| Role | What they can do |
 |---|---|
-| Müşteri | Keşif (şehir/kategori/tarih), koltuk planından veya kategoriden seçim, süreli hold, simüle ödeme, QR bilet, izinli tam iptal |
-| Organizatör | Yalnız kendi organizasyonunun mekan, plan, etkinlik, seans, fiyat/kapasite, kapı ekibi, satış özeti ve operasyon kuyruğu |
-| Kapı görevlisi | Yalnız atandığı seansta online check-in (kamera veya elle kod) |
-| Platform yöneticisi | Organizasyon onayı, yayından kaldırma, operasyon kuyruğu, denetim kaydı, dead-letter, demo PSP paneli |
+| Customer | Discovery (city/category/date), selection from the seating plan or by category, time-limited hold, simulated payment, QR ticket, full cancellation where permitted |
+| Organizer | Only their own organization's venues, seating plans, events, sessions, pricing/capacity, gate team, sales summary and operations queue |
+| Gate attendant | Online check-in (camera or manual code entry), only for the session they are assigned to |
+| Platform administrator | Organization approval, unpublishing, operations queue, audit log, dead-letter, demo PSP panel |
 
-## Mimari (özet)
+## Architecture (summary)
 
 ```mermaid
 flowchart LR
-    B[Tarayıcı · React SPA] -- HTTPS · çerez + CSRF --> K
-    subgraph Loca.Api [Tek süreç: ASP.NET Core 10]
-      K[Kestrel] --> M[Modüller: Identity · Catalog · Inventory · Orders · Tickets · Operations]
-      M -- aynı transaction --> O[(outbox)]
-      O --> W[Worker'lar: outbox · hold süre dolumu · reconciliation · seans iptali · saklama]
-      W -- HTTP + API anahtarı --> S[Simüle PSP · ayrı şema]
-      S -- HMAC imzalı webhook --> M
+    B[Browser · React SPA] -- HTTPS · cookie + CSRF --> K
+    subgraph Loca.Api [Single process: ASP.NET Core 10]
+      K[Kestrel] --> M[Modules: Identity · Catalog · Inventory · Orders · Tickets · Operations]
+      M -- same transaction --> O[(outbox)]
+      O --> W[Workers: outbox · hold expiry · reconciliation · session cancellation · retention]
+      W -- HTTP + API key --> S[Simulated PSP · separate schema]
+      S -- webhook signed with HMAC --> M
     end
     M --> PG[(PostgreSQL 18)]
 ```
 
-- **Modular monolith**, tek veritabanı, modül başına şema. Saf iş kuralları `Loca.Domain` içinde (EF/HTTP bağımlılığı yok).
-- **Envanter:** `READ COMMITTED` + deterministik sırada `SELECT … FOR UPDATE` + koşullu güncelleme + CHECK/unique kısıtlar.
-- **Idempotency:** kayıt, iş etkisiyle aynı transaction'da; yanıt gövdesi bayt olarak saklanır.
-- **Ödeme:** sağlayıcı çağrısı transaction dışında (outbox); senkron yanıt, webhook ve reconciliation tek durum uygulama yolundan geçer.
-- **Kimlik:** HttpOnly/Secure çerez + sunucu oturum kaydı (logout sonrası eski çerez geçersiz) + CSRF.
-- Kararların gerekçeleri: [`docs/adr/`](docs/adr). Ayrıntı: [`docs/03-target-architecture.md`](docs/03-target-architecture.md).
+- **Modular monolith**, a single database, one schema per module. Pure business rules live in `Loca.Domain` (no EF/HTTP dependency).
+- **Inventory:** `READ COMMITTED` + `SELECT … FOR UPDATE` in a deterministic order + conditional updates + CHECK/unique constraints.
+- **Idempotency:** the record is written in the same transaction as the business effect; the response body is stored as bytes.
+- **Payment:** the provider call is made outside the transaction (outbox); the synchronous response, the webhook and reconciliation all go through a single state-application path.
+- **Identity:** HttpOnly/Secure cookie + server-side session record (the old cookie is invalid after logout) + CSRF.
+- Rationale for the decisions: [`docs/adr/`](docs/adr). Details: [`docs/03-target-architecture.md`](docs/03-target-architecture.md).
 
-## Gereksinimler
+## Requirements
 
-| Amaç | Gerekli |
+| Purpose | Required |
 |---|---|
-| Uygulamayı çalıştırmak | Docker Engine + Compose v2 (Docker Desktop yeterli) |
-| Smoke testi | + Node.js 24 |
-| Geliştirme / testler | + .NET SDK 10.0.401, Node.js 24 / npm |
+| Running the application | Docker Engine + Compose v2 (Docker Desktop is enough) |
+| Smoke test | + Node.js 24 |
+| Development / tests | + .NET SDK 10.0.401, Node.js 24 / npm |
 
-İlk derlemede `postgres:18.6`, `mcr.microsoft.com/dotnet/sdk:10.0.401`, `mcr.microsoft.com/dotnet/aspnet:10.0.12`
-ve `node:24-alpine` imajları çekilir. Makineye başka bir şey kurulmaz.
+On the first build the `postgres:18.6`, `mcr.microsoft.com/dotnet/sdk:10.0.401`, `mcr.microsoft.com/dotnet/aspnet:10.0.12`
+and `node:24-alpine` images are pulled. Nothing else is installed on the machine.
 
-## Çalıştırma
+## Running
 
-Proje köküne geçin (yol boşluk içeriyorsa tırnak kullanın):
+Change to the project root (use quotes if the path contains spaces):
 
 ```powershell
 # Windows PowerShell
 cd "D:\Etkinlik ve Bilet Satış Platformu\event-ticketing-platform"
-.\scripts\local-stack.ps1 init      # ilk kurulum: secret üretir, imajı derler, migration + demo verisi
-.\scripts\local-stack.ps1 status    # servisler ve /health/ready
-.\scripts\local-stack.ps1 logs      # loglar (isteğe bağlı: -Service api)
-.\scripts\local-stack.ps1 down      # durdur — veri ve secret dosyaları KORUNUR
-.\scripts\local-stack.ps1 up        # yeniden aç
+.\scripts\local-stack.ps1 init      # first-time setup: creates secrets, builds the image, migration + demo data
+.\scripts\local-stack.ps1 status    # services and /health/ready
+.\scripts\local-stack.ps1 logs      # logs (optional: -Service api)
+.\scripts\local-stack.ps1 down      # stop — data and secret files are KEPT
+.\scripts\local-stack.ps1 up        # start again
 ```
 
 ```bash
 # Linux / macOS / WSL / Git Bash
-cd /yol/event-ticketing-platform
+cd /path/to/event-ticketing-platform
 scripts/local-stack.sh init
 scripts/local-stack.sh status
 scripts/local-stack.sh down
 scripts/local-stack.sh up
 ```
 
-Adres: **https://localhost:8643** — sertifika yerelde üretilen self-signed sertifikadır; tarayıcı ilk
-açılışta uyarı gösterir (makinenin güven deposu değiştirilmez). Farklı port için: `init -HttpsPort 9443`
+Address: **https://localhost:8643** — the certificate is a self-signed certificate created locally; the browser shows
+a warning on first visit (the machine's trust store is not modified). For a different port: `init -HttpsPort 9443`
 (`--https-port 9443`).
 
-`init` tekrar çalıştırılabilir: var olan secret dosyalarının üzerine yazmaz, demo verisi idempotenttir.
+`init` can be re-run: it does not overwrite existing secret files, and the demo data is idempotent.
 
-### Yıkıcı sıfırlama (ayrı ve açık komut)
+### Destructive reset (a separate, explicit command)
 
 ```powershell
 .\scripts\local-stack.ps1 reset -ConfirmProject loca
 ```
 
-Volume'ları ve `.local/loca/` durum dizinini siler. Onay parametresi olmadan çalışmaz ve silmeden önce
-volume etiketinin bu stack'in manifestindeki kimlikle eşleştiğini doğrular.
+Deletes the volumes and the `.local/loca/` state directory. It does not run without the confirmation parameter, and
+before deleting it verifies that the volume label matches the identity in this stack's manifest.
 
-## Demo kullanıcıları
+## Demo users
 
-Parolalar depoda yoktur; `init` sırasında rastgele üretilir ve **kullanıcı adıyla aynı adı taşıyan**
-özel dosyalara yazılır: `.local/loca/users/<e-posta>.password.txt` (`.local/` git tarafından yok sayılır).
+Passwords are not in the repository; they are created at random during `init` and written to private files **named
+after the user name**: `.local/loca/users/<email>.password.txt` (`.local/` is ignored by git).
 
-| Kullanıcı (e-posta) | Rol | Parola dosyası |
+| User (email) | Role | Password file |
 |---|---|---|
-| `platform-admin@loca.demo` | Platform yöneticisi | `.local/loca/users/platform-admin@loca.demo.password.txt` |
-| `organizer-kumru@loca.demo` | Organizatör — Kumru Sahne (Demo) | `.local/loca/users/organizer-kumru@loca.demo.password.txt` |
-| `organizer-marti@loca.demo` | Organizatör — Martı Etkinlik (Demo) | `.local/loca/users/organizer-marti@loca.demo.password.txt` |
-| `gate-kumru@loca.demo` | Kapı görevlisi — Kumru Sahne | `.local/loca/users/gate-kumru@loca.demo.password.txt` |
-| `customer-ayse@loca.demo` | Müşteri | `.local/loca/users/customer-ayse@loca.demo.password.txt` |
-| `customer-mehmet@loca.demo` | Müşteri | `.local/loca/users/customer-mehmet@loca.demo.password.txt` |
+| `platform-admin@loca.demo` | Platform administrator | `.local/loca/users/platform-admin@loca.demo.password.txt` |
+| `organizer-kumru@loca.demo` | Organizer — Kumru Sahne (Demo) | `.local/loca/users/organizer-kumru@loca.demo.password.txt` |
+| `organizer-marti@loca.demo` | Organizer — Martı Etkinlik (Demo) | `.local/loca/users/organizer-marti@loca.demo.password.txt` |
+| `gate-kumru@loca.demo` | Gate attendant — Kumru Sahne | `.local/loca/users/gate-kumru@loca.demo.password.txt` |
+| `customer-ayse@loca.demo` | Customer | `.local/loca/users/customer-ayse@loca.demo.password.txt` |
+| `customer-mehmet@loca.demo` | Customer | `.local/loca/users/customer-mehmet@loca.demo.password.txt` |
 
-Parolayı görmek için: `Get-Content ".local\loca\users\customer-ayse@loca.demo.password.txt"`.
+To see a password: `Get-Content ".local\loca\users\customer-ayse@loca.demo.password.txt"`.
 
-Demo kataloğu seed anına göre tarihlenir: üç gelecek tarihli seans ve kapı ekranını denemek için
-başlangıcına 2 saat kalan bir "Bu Akşam Stand-up (Demo)" seansı. Bu seans başladıktan sonra keşifte
-görünmez; yeni bir yakın seansı organizatör ekranından oluşturabilirsiniz.
+The demo catalog is dated relative to the moment of seeding: three future-dated sessions, and — for trying out the gate
+screen — a "Bu Akşam Stand-up (Demo)" session that is 2 hours away from its start. Once that session has started it no
+longer appears in discovery; you can create a new near-term session from the organizer screen.
 
-## Demo yürüyüşü
+## Demo walkthrough
 
-Adım adım senaryo: [`docs/portfolio-summary.md`](docs/portfolio-summary.md#demo-yürüyüşü).
+Step-by-step scenario (the document is in Turkish): [`docs/portfolio-summary.md`](docs/portfolio-summary.md#demo-yürüyüşü).
 
-## Testler
+## Tests
 
 ```powershell
 dotnet restore --locked-mode
 dotnet build -c Release --no-restore
 dotnet test --project tests/Loca.UnitTests -c Release --no-build
-dotnet test --project tests/Loca.IntegrationTests -c Release --no-build   # Testcontainers: kendi PostgreSQL 18.6'sını açar
+dotnet test --project tests/Loca.IntegrationTests -c Release --no-build   # Testcontainers: starts its own PostgreSQL 18.6
 
 cd web
 npm ci
 npm run typecheck; npm run lint; npm run test; npm run build
-npm run e2e            # bu koşuya özel boş bir stack açar, Playwright'ı çalıştırır, stack'i siler
+npm run e2e            # starts an empty stack dedicated to this run, runs Playwright, deletes the stack
 cd ..
 
-node scripts/smoke.mjs --project loca    # çalışan stack'e HTTPS smoke (restart ve DB kesintisi dahil)
-node scripts/scan-repo.mjs               # depo secret / yazar taraması
+node scripts/smoke.mjs --project loca    # HTTPS smoke against the running stack (including restart and DB outage)
+node scripts/scan-repo.mjs               # repository secret / author scan
 ```
 
-- Entegrasyon testleri SQLite/EF InMemory kullanmaz; yalnız kendi başlattıkları PostgreSQL konteynerine yazar
-  (uç nokta + sunucu kimliği + koşuya ait işaret doğrulanır).
-- .NET 10 SDK'da xUnit v3, Microsoft Testing Platform ile çalışır: `dotnet test --project <yol>` biçimi kullanılır.
-- Son doğrulama sonuçları: [`docs/final-verification.md`](docs/final-verification.md).
+- Integration tests do not use SQLite/EF InMemory; they write only to the PostgreSQL container they start themselves
+  (the endpoint + the server identity + a marker belonging to the run are verified).
+- On the .NET 10 SDK, xUnit v3 runs on Microsoft Testing Platform: the `dotnet test --project <path>` form is used.
+- Latest verification results: [`docs/final-verification.md`](docs/final-verification.md). They are local results and belong to the source
+  state that was used during that verification, before the repository was pushed (its "remote CI was not run / no push" statements describe
+  that moment). Since then commit `05c3901` changed only the executable bit of `scripts/local-stack.sh`, and this README was translated
+  (`README.md` in English, Turkish text in `README.tr.md`; the README files are outside the scope of the recorded fingerprint). No local
+  re-run of the recorded verification is on record after these changes.
+- Remote CI: [run 38181683048](https://github.com/TCoderr/event-ticketing-platform/actions/runs/38181683048) on commit `05c3901` completed
+  successfully (backend, web, repository scan and E2E jobs; checked 2026-10-12, UTC+3). The statement is tied to that commit: no result is
+  claimed for later commits, including the one that adds this README text. Current state:
+  [GitHub Actions](https://github.com/TCoderr/event-ticketing-platform/actions) (definition: [`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
 
-## Depo düzeni
+## Repository layout
 
 ```
-src/Loca.Domain/            Saf iş kuralları (durum makineleri, para, zaman politikaları, kanonik özet, token, imza)
+src/Loca.Domain/            Pure business rules (state machines, money, time policies, canonical digest, token, signature)
 src/Loca.Api/               ASP.NET Core host: Modules/, Infrastructure/, PspSimulator/
-tests/Loca.UnitTests/       Domain ve saf yardımcılar
-tests/Loca.IntegrationTests/ Gerçek PostgreSQL + gerçek HTTP hattı
-web/                        React SPA, bileşen testleri, Playwright E2E
-scripts/                    local-stack (ps1/sh), smoke, depo taraması
-deploy/postgres/init/       Veritabanı rollerinin ilk kurulumu
-design/preview.html         Statik arayüz prototipi
-docs/                       Gereksinim, domain, mimari, veritabanı, API, güvenlik, arayüz, plan, test, ADR'ler, raporlar
+tests/Loca.UnitTests/       Domain and pure helpers
+tests/Loca.IntegrationTests/ Real PostgreSQL + real HTTP pipeline
+web/                        React SPA, component tests, Playwright E2E
+scripts/                    local-stack (ps1/sh), smoke, repository scan
+deploy/postgres/init/       Initial setup of the database roles
+design/preview.html         Static UI prototype
+docs/                       Requirements, domain, architecture, database, API, security, UI, plan, tests, ADRs, reports
 ```
 
-## Belgeler
+## Documentation
 
-| Belge | İçerik |
+| Document | Contents |
 |---|---|
-| [`docs/01-product-requirements.md`](docs/01-product-requirements.md) | Kapsam, roller, zaman kuralları, metrik tanımları |
-| [`docs/02-domain-and-state-machines.md`](docs/02-domain-and-state-machines.md) | Aggregate'ler, kilit sırası, durum makineleri, yarış senaryoları |
-| [`docs/03-target-architecture.md`](docs/03-target-architecture.md) | Mimari, modüller, transaction sahipliği, sürümler |
-| [`docs/04-database-design.md`](docs/04-database-design.md) · [`04a`](docs/04a-schema-reference.md) | Şema tasarımı, roller, saklama; üretilmiş şema dökümü |
-| [`docs/05-api-contracts.md`](docs/05-api-contracts.md) · [`05a`](docs/05a-api-operations.md) | API sözleşmesi; OpenAPI ile testle eşlenen operasyon listesi |
-| [`docs/06-security-and-failure-behavior.md`](docs/06-security-and-failure-behavior.md) | Kimlik, yetki matrisi, hata davranışı |
-| [`docs/07-ui-design.md`](docs/07-ui-design.md) | Arayüz kimliği, ekranlar, erişilebilirlik |
-| [`docs/09-test-and-verification-plan.md`](docs/09-test-and-verification-plan.md) | Test stratejisi ve invariant → test eşlemesi |
-| [`docs/final-verification.md`](docs/final-verification.md) | Çalıştırılan komutlar, sayılar, bulunan/düzeltilen kusurlar |
-| [`docs/known-limitations.md`](docs/known-limitations.md) | Bilinen sınırlar ve doğrulanmayanlar |
-| [`docs/portfolio-summary.md`](docs/portfolio-summary.md) | İş problemi, teknik kararlar, demo yürüyüşü |
-| [`docs/versions-and-licenses.md`](docs/versions-and-licenses.md) | Sürümler, kaynakları ve üçüncü taraf lisansları |
+| [`docs/01-product-requirements.md`](docs/01-product-requirements.md) | Scope, roles, time rules, metric definitions |
+| [`docs/02-domain-and-state-machines.md`](docs/02-domain-and-state-machines.md) | Aggregates, lock order, state machines, race scenarios |
+| [`docs/03-target-architecture.md`](docs/03-target-architecture.md) | Architecture, modules, transaction ownership, versions |
+| [`docs/04-database-design.md`](docs/04-database-design.md) · [`04a`](docs/04a-schema-reference.md) | Schema design, roles, retention; generated schema dump |
+| [`docs/05-api-contracts.md`](docs/05-api-contracts.md) · [`05a`](docs/05a-api-operations.md) | API contract; operation list matched against OpenAPI by a test |
+| [`docs/06-security-and-failure-behavior.md`](docs/06-security-and-failure-behavior.md) | Identity, authorization matrix, failure behavior |
+| [`docs/07-ui-design.md`](docs/07-ui-design.md) | UI identity, screens, accessibility |
+| [`docs/09-test-and-verification-plan.md`](docs/09-test-and-verification-plan.md) | Test strategy and invariant → test mapping |
+| [`docs/final-verification.md`](docs/final-verification.md) | Commands run, counts, defects found/fixed |
+| [`docs/known-limitations.md`](docs/known-limitations.md) | Known limitations and what was not verified |
+| [`docs/portfolio-summary.md`](docs/portfolio-summary.md) | Business problem, technical decisions, demo walkthrough |
+| [`docs/versions-and-licenses.md`](docs/versions-and-licenses.md) | Versions, their sources and third-party licenses |
 
-## Kapsam dışı
+## Out of scope
 
-Gerçek PSP / e-posta / SMS, kampanya-kupon, dinamik fiyat, bekleme odası, CAPTCHA, offline check-in,
-native mobil uygulama, harita, yeniden satış, çoklu para birimi, hakediş/komisyon/muhasebe, yasal
-fatura, Kubernetes ve bulut dağıtımı, AI/LLM özelliği.
+Real PSP / email / SMS, campaigns and coupons, dynamic pricing, waiting room, CAPTCHA, offline check-in,
+native mobile app, maps, resale, multiple currencies, payouts/commission/accounting, statutory
+invoicing, Kubernetes and cloud deployment, AI/LLM features.
